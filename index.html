@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纪检监察大数据可视化平台</title>
+    
+    <!-- ECharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background:
+                /* 科技网格叠加层(降低透明度让背景更清晰) */
+                repeating-linear-gradient(0deg, rgba(0, 210, 255, 0.015) 0px, transparent 1px, transparent 40px, rgba(0, 210, 255, 0.015) 41px),
+                repeating-linear-gradient(90deg, rgba(0, 210, 255, 0.015) 0px, transparent 1px, transparent 40px, rgba(0, 210, 255, 0.015) 41px),
+                /* 半透明遮罩层(降低透明度让背景图更清晰) */
+                linear-gradient(135deg, rgba(11, 15, 42, 0.3) 0%, rgba(26, 31, 58, 0.4) 100%),
+                /* 👇👇👇 在下面这行的引号内粘贴您的背景图URL 👇👇👇 */
+                url('https://www.xawl.edu.cn/guanzhong9.jpg');
+            background-attachment: fixed;
+            background-size: 40px 40px, 40px 40px, 100% 100%, cover;
+            background-position: 0 0, 0 0, 0 0, center center;
+            background-repeat: repeat, repeat, no-repeat, no-repeat;
+            color: #00D2FF;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* 科技感背景动画层(降低透明度) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(153, 51, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 210, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 20%, rgba(0, 210, 255, 0.05) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 0;
+            animation: bgPulse 8s ease-in-out infinite;
+        }
+
+        /* 动态粒子效果层 */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(2px 2px at 20% 30%, rgba(0, 210, 255, 0.8), transparent),
+                radial-gradient(2px 2px at 60% 70%, rgba(153, 51, 255, 0.8), transparent),
+                radial-gradient(1px 1px at 50% 50%, rgba(0, 210, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 80% 10%, rgba(153, 51, 255, 0.6), transparent),
+                radial-gradient(2px 2px at 90% 60%, rgba(0, 210, 255, 0.7), transparent),
+                radial-gradient(1px 1px at 30% 80%, rgba(153, 51, 255, 0.5), transparent);
+            background-size: 200% 200%;
+            background-position: 0% 0%;
+            pointer-events: none;
+            z-index: 0;
+            animation: particleFloat 20s linear infinite;
+        }
+
+        @keyframes bgPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes particleFloat {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        /* ========== Header顶部栏样式 ========== */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(180deg, rgba(11, 15, 42, 0.95) 0%, rgba(11, 15, 42, 0.85) 100%);
+            border-bottom: 2px solid rgba(0, 210, 255, 0.5);
+            box-shadow:
+                0 4px 20px rgba(0, 210, 255, 0.3),
+                inset 0 -1px 10px rgba(0, 210, 255, 0.2);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+        }
+
+        /* Header四角装饰 */
+        .header::before,
+        .header::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #00D2FF;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
+        }
+
+        .header::before {
+            top: 10px;
+            left: 10px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .header::after {
+            bottom: 10px;
+            right: 10px;
+            border-left: none;
+            border-top: none;
+        }
+
+        /* Logo区域 */
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-logo img {
+            height: 50px;
+            width: auto;
+            filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.5));
+            transition: all 0.3s ease;
+        }
+
+        .header-logo img:hover {
+            filter: drop-shadow(0 0 20px rgba(0, 210, 255, 0.8));
+            transform: scale(1.05);
+        }
+
+        .header-logo-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00D2FF;
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.8);
+        }
+
+        /* 标题区域 */
+        .header-title {
+            flex: 1;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00D2FF 0%, #9933FF 50%, #00D2FF 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+            letter-spacing: 3px;
+            position: relative;
+            padding: 0 80px;
+            filter: drop-shadow(0 0 20px rgba(0, 210, 255, 0.6));
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+        }
+
+        /* SVG装饰容器 */
+        .header-title svg {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .header-title .svg-left {
+            left: 0;
+        }
+
+        .header-title .svg-right {
+            right: 0;
+        }
+
+        /* SVG扫描线动画 */
+        @keyframes scanLine {
+            0% { transform: translateX(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+
+        /* SVG光点动画 */
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0.3; r: 2; }
+            50% { opacity: 1; r: 3; }
+        }
+
+        /* SVG线条绘制动画 */
+        @keyframes drawLine {
+            0% { stroke-dashoffset: 200; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        /* 右侧装饰区域 */
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 14px;
+            color: #00D2FF;
+        }
+
+        .header-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 20px;
+            box-shadow: inset 0 0 10px rgba(0, 210, 255, 0.2);
+        }
+
+        .header-time i {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ========== 调整容器以适应Header ========== */
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100vw;
+            height: calc(100vh - 80px); /* 减去Header高度 */
+            margin-top: 80px; /* Header高度 */
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        /* 通用面板样式 - 增强毛玻璃效果 */
+        .panel {
+            background: linear-gradient(135deg, rgba(11, 15, 42, 0.75) 0%, rgba(26, 31, 58, 0.7) 100%);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            box-shadow:
+                0 8px 32px rgba(0, 210, 255, 0.3),
+                0 0 0 1px rgba(0, 210, 255, 0.15) inset,
+                inset 0 0 40px rgba(0, 210, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        /* 面板边框渐变动画 */
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 12px;
+            padding: 1px;
+            background: linear-gradient(135deg,
+                rgba(0, 210, 255, 0.5) 0%,
+                rgba(153, 51, 255, 0.5) 50%,
+                rgba(0, 210, 255, 0.5) 100%);
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderGlow 3s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes borderGlow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* 面板悬停效果 */
+        .panel:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 12px 40px rgba(0, 210, 255, 0.35),
+                0 0 0 1px rgba(0, 210, 255, 0.2) inset,
+                inset 0 0 50px rgba(0, 210, 255, 0.12);
+        }
+
+        /* 面板顶部高光效果 */
+        .panel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.4) 50%,
+                transparent 100%);
+            pointer-events: none;
+        }
+
+        /* 四角装饰 - 使用渐变背景实现 */
+        .panel-title::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 25px;
+            height: 25px;
+            border-top: 2px solid #00D2FF;
+            border-right: 2px solid #00D2FF;
+            box-shadow: 2px -2px 10px rgba(0, 210, 255, 0.5);
+            opacity: 0.8;
+        }
+        
+        .panel-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-left: 30px;
+            color: #00D2FF;
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.8);
+            position: relative;
+        }
+        
+        .panel-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #00D2FF 0%, #9933FF 100%);
+            box-shadow: 0 0 10px #00D2FF;
+        }
+        
+        /* 图表容器 */
+        .chart-container {
+            width: 100%;
+            height: calc(100% - 50px);
+        }
+
+        /* ========== 右上角：滚动列表样式 ========== */
+        #news-container {
+            overflow: hidden;
+            position: relative;
+        }
+
+        .news-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .news-table thead {
+            background: rgba(0, 210, 255, 0.1);
+        }
+
+        .news-table th {
+            padding: 12px 8px;
+            text-align: left;
+            color: #00D2FF;
+            font-weight: bold;
+            border-bottom: 2px solid rgba(0, 210, 255, 0.3);
+            font-size: 14px;
+        }
+
+        .news-table tbody {
+            display: block;
+            height: calc(100% - 45px);
+            overflow: hidden;
+        }
+
+        .news-table thead,
+        .news-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .news-table tbody tr {
+            border-bottom: 1px solid rgba(0, 210, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .news-table tbody tr:nth-child(even) {
+            background: rgba(153, 51, 255, 0.05);
+        }
+
+        .news-table tbody tr:hover {
+            background: rgba(0, 210, 255, 0.15);
+            transform: translateX(5px);
+            cursor: pointer;
+        }
+
+        .news-table td {
+            padding: 10px 8px;
+            color: #a0d8ef;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .news-table td a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .news-table td a:hover {
+            color: #00D2FF;
+            text-shadow: 0 0 5px rgba(0, 210, 255, 0.8);
+        }
+
+        /* 滚动动画 */
+        @keyframes scroll-up {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(-50%);
+            }
+        }
+
+        .news-scroll {
+            animation: scroll-up 30s linear infinite;
+        }
+
+        .news-scroll:hover {
+            animation-play-state: paused;
+        }
+
+        /* ========== 右下角：AI对话界面样式 ========== */
+        #ai-container {
+            display: flex;
+            flex-direction: column;
+            background: rgba(11, 15, 42, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-history::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-history::-webkit-scrollbar-track {
+            background: rgba(0, 210, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .chat-history::-webkit-scrollbar-thumb {
+            background: rgba(0, 210, 255, 0.4);
+            border-radius: 3px;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+
+        .chat-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .chat-message.ai .chat-avatar {
+            background: linear-gradient(135deg, #00D2FF 0%, #0080FF 100%);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
+        }
+
+        .chat-message.user .chat-avatar {
+            background: linear-gradient(135deg, #9933FF 0%, #CC33FF 100%);
+            box-shadow: 0 0 15px rgba(153, 51, 255, 0.5);
+        }
+
+        .chat-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.6;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+
+        .chat-message.ai .chat-bubble {
+            background: rgba(0, 210, 255, 0.15);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            color: #a0d8ef;
+        }
+
+        .chat-message.user .chat-bubble {
+            background: rgba(153, 51, 255, 0.15);
+            border: 1px solid rgba(153, 51, 255, 0.3);
+            color: #d4a5ff;
+        }
+
+        .chat-input-area {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(0, 210, 255, 0.2);
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px 15px;
+            background: rgba(11, 15, 42, 0.8);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 20px;
+            color: #00D2FF;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #00D2FF;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+        }
+
+        .chat-input::placeholder {
+            color: rgba(160, 216, 239, 0.5);
+        }
+
+        .chat-send-btn {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #00D2FF 0%, #0080FF 100%);
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+        }
+
+        .chat-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 210, 255, 0.6);
+        }
+
+        .chat-send-btn:active {
+            transform: translateY(0);
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header顶部栏 -->
+    <div class="header">
+        <div class="header-logo">
+            <img src="https://www.xawl.edu.cn/image/logo.png" alt="西安文理学院">
+        </div>
+
+        <div class="header-title">
+            <!-- 左侧SVG装饰 -->
+            <svg class="svg-left" width="70" height="60" viewBox="0 0 70 60" xmlns="http://www.w3.org/2000/svg">
+                <!-- 主线条 -->
+                <path d="M 5 30 L 25 30 L 30 25 L 30 15"
+                      stroke="url(#gradient1)"
+                      stroke-width="2"
+                      fill="none"
+                      stroke-dasharray="200"
+                      stroke-dashoffset="200"
+                      style="animation: drawLine 2s ease-out forwards;">
+                </path>
+                <path d="M 5 30 L 25 30 L 30 35 L 30 45"
+                      stroke="url(#gradient1)"
+                      stroke-width="2"
+                      fill="none"
+                      stroke-dasharray="200"
+                      stroke-dashoffset="200"
+                      style="animation: drawLine 2s ease-out 0.3s forwards;">
+                </path>
+                <!-- 装饰圆点 -->
+                <circle cx="30" cy="15" r="2" fill="#00D2FF" opacity="0.3">
+                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+                    <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="30" cy="45" r="2" fill="#9933FF" opacity="0.3">
+                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+                    <animate attributeName="r" values="2;3;2" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="25" cy="30" r="1.5" fill="#00D2FF">
+                    <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
+                </circle>
+                <!-- 扫描线 -->
+                <rect x="0" y="28" width="3" height="4" fill="url(#scanGradient)" opacity="0">
+                    <animate attributeName="x" values="-5;70" dur="3s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite"/>
+                </rect>
+                <!-- 渐变定义 -->
+                <defs>
+                    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#00D2FF;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#9933FF;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="scanGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#00D2FF;stop-opacity:0" />
+                        <stop offset="50%" style="stop-color:#00D2FF;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#00D2FF;stop-opacity:0" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
+            纪检监察大数据可视化平台
+
+            <!-- 右侧SVG装饰 -->
+            <svg class="svg-right" width="70" height="60" viewBox="0 0 70 60" xmlns="http://www.w3.org/2000/svg">
+                <!-- 主线条（镜像） -->
+                <path d="M 65 30 L 45 30 L 40 25 L 40 15"
+                      stroke="url(#gradient2)"
+                      stroke-width="2"
+                      fill="none"
+                      stroke-dasharray="200"
+                      stroke-dashoffset="200"
+                      style="animation: drawLine 2s ease-out forwards;">
+                </path>
+                <path d="M 65 30 L 45 30 L 40 35 L 40 45"
+                      stroke="url(#gradient2)"
+                      stroke-width="2"
+                      fill="none"
+                      stroke-dasharray="200"
+                      stroke-dashoffset="200"
+                      style="animation: drawLine 2s ease-out 0.3s forwards;">
+                </path>
+                <!-- 装饰圆点 -->
+                <circle cx="40" cy="15" r="2" fill="#9933FF" opacity="0.3">
+                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+                    <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="40" cy="45" r="2" fill="#00D2FF" opacity="0.3">
+                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+                    <animate attributeName="r" values="2;3;2" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="45" cy="30" r="1.5" fill="#9933FF">
+                    <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
+                </circle>
+                <!-- 扫描线 -->
+                <rect x="0" y="28" width="3" height="4" fill="url(#scanGradient2)" opacity="0">
+                    <animate attributeName="x" values="70;-5" dur="3s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite"/>
+                </rect>
+                <!-- 渐变定义 -->
+                <defs>
+                    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#9933FF;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#00D2FF;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="scanGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#9933FF;stop-opacity:0" />
+                        <stop offset="50%" style="stop-color:#9933FF;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#9933FF;stop-opacity:0" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+
+        <div class="header-info">
+            <div class="header-time">
+                <i class="fas fa-clock"></i>
+                <span id="current-time">2025-12-17 11:30:00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 左上角：违规事项分布 -->
+        <div class="panel" id="panel-violations">
+            <h2 class="panel-title"><i class="fas fa-chart-pie"></i> 违规事项分布</h2>
+            <div id="chart-violations" class="chart-container"></div>
+        </div>
+        
+        <!-- 右上角：实时情报滚动名单 -->
+        <div class="panel" id="panel-news">
+            <h2 class="panel-title"><i class="fas fa-list-alt"></i> 实时情报滚动名单</h2>
+            <div id="news-container" class="chart-container"></div>
+        </div>
+        
+        <!-- 左下角：案件查处统计 -->
+        <div class="panel" id="panel-cases">
+            <h2 class="panel-title"><i class="fas fa-chart-bar"></i> 案件查处统计</h2>
+            <div id="chart-cases" class="chart-container"></div>
+        </div>
+        
+        <!-- 右下角：AI智能助手 -->
+        <div class="panel" id="panel-ai">
+            <h2 class="panel-title"><i class="fas fa-robot"></i> 纪检AI智能助手</h2>
+            <div id="ai-container" class="chart-container"></div>
+        </div>
+    </div>
+    
+    <script>
+        // ========== API配置常量 ==========
+        const COZE_BOT_ID = "7584448825868189732";
+        const COZE_API_KEY = "pat_XAXCUN8690km9Kp0sXJbiYzxZkNOB3Bm4taHyDc29FcMkXHLg1akdTwXZIUTnTxz";
+        const COZE_CHAT_URL = "https://api.coze.cn/open_api/v2/chat";  // 使用v2 API（同步返回）
+        const CRAWLER_API_URL = "http://localhost:5000/api/news";  // 本地爬虫服务地址
+
+        // ========== Mock数据 ==========
+        const mockViolationsData = [
+            { name: '违反八项规定', value: 156 },
+            { name: '形式主义官僚主义', value: 203 },
+            { name: '贪污受贿', value: 89 },
+            { name: '滥用职权', value: 134 },
+            { name: '失职渎职', value: 67 },
+            { name: '其他违纪违法', value: 112 }
+        ];
+
+        const mockCasesData = {
+            months: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+            values: [45, 52, 38, 67, 73, 58, 49, 81, 76, 63, 55, 70]
+        };
+
+        const mockNewsData = [
+            { title: '中央纪委通报5起违反中央八项规定精神典型问题', date: '2024-06-15', source: '中央纪委国家监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '某省纪委监委通报3起形式主义官僚主义典型案例', date: '2024-06-14', source: '省纪委监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '市纪委监委查处一起贪污受贿案件', date: '2024-06-13', source: '市纪委监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '县纪委监委通报违规收受礼品礼金问题', date: '2024-06-12', source: '县纪委监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '某单位领导干部因失职渎职被立案审查', date: '2024-06-11', source: '中央纪委国家监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '通报：违规使用公车问题典型案例', date: '2024-06-10', source: '省纪委监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '某国企高管涉嫌严重违纪违法接受审查调查', date: '2024-06-09', source: '中央纪委国家监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '市纪委监委通报违规发放津补贴问题', date: '2024-06-08', source: '市纪委监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '某局长因违规经商办企业被处分', date: '2024-06-07', source: '县纪委监委', url: 'https://www.ccdi.gov.cn' },
+            { title: '通报：违规公款吃喝典型案例', date: '2024-06-06', source: '省纪委监委', url: 'https://www.ccdi.gov.cn' }
+        ];
+
+        // ========== 初始化函数 ==========
+        window.onload = async function() {
+            initViolationsChart();
+            initCasesChart();
+            await initNewsScroll();  // 异步加载爬虫数据
+            initAIChat();
+            updateTime(); // 启动时间更新
+        };
+
+        // ========== 实时时间更新 ==========
+        function updateTime() {
+            const timeElement = document.getElementById('current-time');
+
+            function refresh() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+
+                timeElement.textContent = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            }
+
+            refresh();
+            setInterval(refresh, 1000); // 每秒更新
+        }
+
+        // ========== 左上角：南丁格尔玫瑰图 ==========
+        function initViolationsChart() {
+            const chart = echarts.init(document.getElementById('chart-violations'));
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c}件 ({d}%)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    borderColor: '#00D2FF',
+                    borderWidth: 1,
+                    textStyle: {
+                        color: '#00D2FF'
+                    }
+                },
+                legend: {
+                    top: '5%',
+                    left: 'center',
+                    textStyle: {
+                        color: '#00D2FF',
+                        fontSize: 12
+                    }
+                },
+                series: [
+                    {
+                        name: '违规事项',
+                        type: 'pie',
+                        radius: ['30%', '70%'],
+                        center: ['50%', '60%'],
+                        roseType: 'area',
+                        itemStyle: {
+                            borderRadius: 8,
+                            borderColor: '#0B0F2A',
+                            borderWidth: 2
+                        },
+                        label: {
+                            color: '#00D2FF',
+                            fontSize: 12,
+                            formatter: '{b}\n{c}件'
+                        },
+                        labelLine: {
+                            lineStyle: {
+                                color: 'rgba(0, 210, 255, 0.5)'
+                            }
+                        },
+                        emphasis: {
+                            scale: true,
+                            scaleSize: 10,
+                            itemStyle: {
+                                shadowBlur: 20,
+                                shadowColor: 'rgba(0, 210, 255, 0.8)'
+                            }
+                        },
+                        data: mockViolationsData,
+                        color: [
+                            new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#FF6B9D' },
+                                { offset: 1, color: '#C44569' }
+                            ]),
+                            new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#FFA502' },
+                                { offset: 1, color: '#FF6348' }
+                            ]),
+                            new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#F8B500' },
+                                { offset: 1, color: '#F77F00' }
+                            ]),
+                            new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#00D2FF' },
+                                { offset: 1, color: '#0080FF' }
+                            ]),
+                            new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#9933FF' },
+                                { offset: 1, color: '#6A00F4' }
+                            ]),
+                            new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#3EECAC' },
+                                { offset: 1, color: '#17B978' }
+                            ])
+                        ]
+                    }
+                ]
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+        }
+
+        // ========== 左下角：高级混合图表（面积折线图 + 柱状图 + 双Y轴） ==========
+        function initCasesChart() {
+            const chart = echarts.init(document.getElementById('chart-cases'));
+
+            // 计算同比增长率（模拟数据）
+            const growthRate = mockCasesData.values.map((val, idx) => {
+                if (idx === 0) return 0;
+                return ((val - mockCasesData.values[idx - 1]) / mockCasesData.values[idx - 1] * 100).toFixed(1);
+            });
+
+            const option = {
+                backgroundColor: 'transparent',
+                title: {
+                    text: '月度趋势分析',
+                    left: 'center',
+                    top: '3%',
+                    textStyle: {
+                        color: '#00D2FF',
+                        fontSize: 16,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross',
+                        crossStyle: {
+                            color: '#00D2FF'
+                        },
+                        lineStyle: {
+                            type: 'dashed',
+                            color: 'rgba(0, 210, 255, 0.5)'
+                        }
+                    },
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    borderColor: '#00D2FF',
+                    borderWidth: 2,
+                    textStyle: {
+                        color: '#00D2FF',
+                        fontSize: 13
+                    },
+                    formatter: function(params) {
+                        let result = `<div style="padding:5px;"><strong>${params[0].axisValue}</strong><br/>`;
+                        params.forEach(item => {
+                            result += `${item.marker} ${item.seriesName}: <strong>${item.value}${item.seriesName.includes('增长') ? '%' : '件'}</strong><br/>`;
+                        });
+                        result += '</div>';
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['案件数', '趋势线', '环比增长率'],
+                    top: '3%',
+                    right: '5%',
+                    textStyle: {
+                        color: '#00D2FF',
+                        fontSize: 12
+                    },
+                    icon: 'roundRect'
+                },
+                grid: {
+                    left: '8%',
+                    right: '8%',
+                    bottom: '15%',
+                    top: '18%',
+                    containLabel: true
+                },
+                dataZoom: [
+                    {
+                        type: 'slider',
+                        show: true,
+                        xAxisIndex: [0],
+                        start: 0,
+                        end: 100,
+                        bottom: '5%',
+                        height: 20,
+                        borderColor: 'rgba(0, 210, 255, 0.3)',
+                        fillerColor: 'rgba(0, 210, 255, 0.2)',
+                        handleStyle: {
+                            color: '#00D2FF',
+                            shadowBlur: 5,
+                            shadowColor: 'rgba(0, 210, 255, 0.8)'
+                        },
+                        textStyle: {
+                            color: '#00D2FF'
+                        }
+                    },
+                    {
+                        type: 'inside',
+                        xAxisIndex: [0],
+                        start: 0,
+                        end: 100
+                    }
+                ],
+                xAxis: {
+                    type: 'category',
+                    data: mockCasesData.months,
+                    boundaryGap: true,
+                    axisLine: {
+                        lineStyle: {
+                            color: 'rgba(0, 210, 255, 0.5)',
+                            width: 2
+                        }
+                    },
+                    axisLabel: {
+                        color: '#00D2FF',
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        interval: 0,
+                        rotate: 0
+                    },
+                    axisTick: {
+                        show: true,
+                        lineStyle: {
+                            color: 'rgba(0, 210, 255, 0.3)'
+                        }
+                    }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '案件数(件)',
+                        position: 'left',
+                        nameTextStyle: {
+                            color: '#00D2FF',
+                            fontSize: 13,
+                            fontWeight: 'bold'
+                        },
+                        axisLine: {
+                            show: true,
+                            lineStyle: {
+                                color: 'rgba(0, 210, 255, 0.5)',
+                                width: 2
+                            }
+                        },
+                        axisLabel: {
+                            color: '#00D2FF',
+                            fontSize: 12,
+                            formatter: '{value}'
+                        },
+                        splitLine: {
+                            lineStyle: {
+                                color: 'rgba(0, 210, 255, 0.1)',
+                                type: 'dashed'
+                            }
+                        }
+                    },
+                    {
+                        type: 'value',
+                        name: '增长率(%)',
+                        position: 'right',
+                        nameTextStyle: {
+                            color: '#9933FF',
+                            fontSize: 13,
+                            fontWeight: 'bold'
+                        },
+                        axisLine: {
+                            show: true,
+                            lineStyle: {
+                                color: 'rgba(153, 51, 255, 0.5)',
+                                width: 2
+                            }
+                        },
+                        axisLabel: {
+                            color: '#9933FF',
+                            fontSize: 12,
+                            formatter: '{value}%'
+                        },
+                        splitLine: {
+                            show: false
+                        }
+                    }
+                ],
+                series: [
+                    // 柱状图
+                    {
+                        name: '案件数',
+                        type: 'bar',
+                        barWidth: '40%',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(0, 210, 255, 0.9)' },
+                                { offset: 0.5, color: 'rgba(0, 128, 255, 0.7)' },
+                                { offset: 1, color: 'rgba(153, 51, 255, 0.5)' }
+                            ]),
+                            borderRadius: [8, 8, 0, 0],
+                            shadowBlur: 15,
+                            shadowColor: 'rgba(0, 210, 255, 0.6)',
+                            shadowOffsetY: 5
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#00D2FF' },
+                                    { offset: 1, color: '#9933FF' }
+                                ]),
+                                shadowBlur: 25,
+                                shadowColor: 'rgba(0, 210, 255, 1)'
+                            }
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#00D2FF',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            formatter: '{c}件'
+                        },
+                        data: mockCasesData.values,
+                        animationDelay: function (idx) {
+                            return idx * 50;
+                        }
+                    },
+                    // 面积折线图
+                    {
+                        name: '趋势线',
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        lineStyle: {
+                            color: '#FF6B9D',
+                            width: 3,
+                            shadowBlur: 10,
+                            shadowColor: 'rgba(255, 107, 157, 0.8)'
+                        },
+                        itemStyle: {
+                            color: '#FF6B9D',
+                            borderColor: '#fff',
+                            borderWidth: 2,
+                            shadowBlur: 10,
+                            shadowColor: 'rgba(255, 107, 157, 0.8)'
+                        },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(255, 107, 157, 0.5)' },
+                                { offset: 1, color: 'rgba(255, 107, 157, 0.05)' }
+                            ])
+                        },
+                        emphasis: {
+                            focus: 'series',
+                            itemStyle: {
+                                color: '#FF6B9D',
+                                borderColor: '#fff',
+                                borderWidth: 3,
+                                shadowBlur: 20,
+                                shadowColor: 'rgba(255, 107, 157, 1)'
+                            }
+                        },
+                        markPoint: {
+                            data: [
+                                { type: 'max', name: '最大值',
+                                  itemStyle: { color: '#FF6B9D' },
+                                  label: { color: '#fff', fontSize: 12, fontWeight: 'bold' }
+                                },
+                                { type: 'min', name: '最小值',
+                                  itemStyle: { color: '#00D2FF' },
+                                  label: { color: '#fff', fontSize: 12, fontWeight: 'bold' }
+                                }
+                            ],
+                            symbolSize: 60,
+                            animation: true
+                        },
+                        markLine: {
+                            silent: true,
+                            lineStyle: {
+                                color: 'rgba(255, 107, 157, 0.3)',
+                                type: 'dashed',
+                                width: 2
+                            },
+                            data: [
+                                { type: 'average', name: '平均值',
+                                  label: {
+                                      formatter: '平均: {c}件',
+                                      color: '#FF6B9D',
+                                      fontSize: 12
+                                  }
+                                }
+                            ]
+                        },
+                        data: mockCasesData.values,
+                        animationDelay: function (idx) {
+                            return idx * 50 + 200;
+                        }
+                    },
+                    // 环比增长率折线图（右Y轴）
+                    {
+                        name: '环比增长率',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        smooth: true,
+                        symbol: 'diamond',
+                        symbolSize: 6,
+                        lineStyle: {
+                            color: '#9933FF',
+                            width: 2,
+                            type: 'dashed'
+                        },
+                        itemStyle: {
+                            color: '#9933FF',
+                            borderColor: '#fff',
+                            borderWidth: 1
+                        },
+                        label: {
+                            show: false
+                        },
+                        data: growthRate,
+                        animationDelay: function (idx) {
+                            return idx * 50 + 400;
+                        }
+                    }
+                ],
+                animationEasing: 'elasticOut',
+                animationDuration: 1500
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+        }
+
+        // ========== 右上角：滚动列表 ==========
+        async function initNewsScroll() {
+            const container = document.getElementById('news-container');
+
+            // 先显示加载提示
+            container.innerHTML = '<div style="text-align:center; padding:50px; color:#00D2FF;">正在加载最新通报数据...</div>';
+
+            // 尝试从爬虫服务获取数据
+            let newsData = mockNewsData;
+            try {
+                const crawlerData = await fetchCrawlerData();
+                if (crawlerData && crawlerData.length > 0) {
+                    newsData = crawlerData;
+                    console.log('✅ 成功加载爬虫数据:', newsData.length, '条');
+                }
+            } catch (error) {
+                console.warn('⚠️ 爬虫数据加载失败，使用Mock数据:', error);
+            }
+
+            // 清空容器
+            container.innerHTML = '';
+
+            // 创建表格
+            const table = document.createElement('table');
+            table.className = 'news-table';
+
+            // 表头
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th style="width: 10%">序号</th>
+                    <th style="width: 45%">通报标题</th>
+                    <th style="width: 15%">日期</th>
+                    <th style="width: 30%">来源</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+
+            // 表体（双倍数据实现无缝滚动）
+            const tbody = document.createElement('tbody');
+            tbody.className = 'news-scroll';
+
+            const doubleData = [...newsData, ...newsData];
+            doubleData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${(index % newsData.length) + 1}</td>
+                    <td><a href="${item.url}" target="_blank" title="${item.title}">${item.title}</a></td>
+                    <td>${item.date}</td>
+                    <td>${item.source}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        // ========== 右下角：AI对话功能 ==========
+        let conversationId = 'session_' + Date.now();
+
+        function initAIChat() {
+            const container = document.getElementById('ai-container');
+
+            container.innerHTML = `
+                <div class="chat-history" id="chat-history">
+                    <div class="chat-message ai">
+                        <div class="chat-avatar">🤖</div>
+                        <div class="chat-bubble">您好！我是纪检监察智能助手，可以为您解答纪检监察相关问题。请问有什么可以帮助您的？</div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="请输入您的问题..." />
+                    <button class="chat-send-btn" id="chat-send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i> 发送
+                    </button>
+                </div>
+            `;
+
+            // 回车发送
+            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // 添加用户消息
+            addMessage('user', message);
+            input.value = '';
+
+            // 添加AI加载状态
+            const loadingId = addMessage('ai', '<span class="loading-dots">正在查询知识库</span>');
+
+            try {
+                // 调用Coze API (v2版本 - 同步返回)
+                const response = await fetch(COZE_CHAT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${COZE_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation_id: conversationId,
+                        bot_id: COZE_BOT_ID,
+                        user: 'web_user_' + Date.now(),
+                        query: message,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Coze API错误响应:', errorText);
+                    throw new Error(`API返回错误: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Coze API响应:', data);
+
+                // 解析Coze v2 API响应
+                let aiReply = '';
+
+                // v2 API的响应格式: { messages: [ { role: "assistant", type: "answer", content: "..." } ] }
+                if (data.messages && Array.isArray(data.messages)) {
+                    // 找到type为"answer"的assistant消息
+                    const answerMsg = data.messages.find(msg =>
+                        msg.role === 'assistant' && msg.type === 'answer'
+                    );
+
+                    if (answerMsg && answerMsg.content) {
+                        aiReply = answerMsg.content;
+                    } else {
+                        // 如果没有answer类型，尝试获取第一条assistant消息
+                        const firstAssistant = data.messages.find(msg => msg.role === 'assistant');
+                        aiReply = firstAssistant?.content || '';
+                    }
+                }
+
+                // 如果仍然没有回复，显示友好错误信息
+                if (!aiReply) {
+                    console.error('❌ 无法解析AI回复，完整响应:', data);
+                    aiReply = '抱歉，我现在有点忙，请稍后再试～';
+                }
+
+                // 移除加载消息，添加真实回复（打字机效果）
+                removeMessage(loadingId);
+                typewriterEffect(aiReply);
+
+            } catch (error) {
+                console.error('AI接口调用失败:', error);
+                removeMessage(loadingId);
+                addMessage('ai', `⚠️ 连接服务器失败：${error.message}\n\n提示：请检查网络连接或API配置是否正确。`);
+            }
+        }
+
+        function addMessage(type, content) {
+            const history = document.getElementById('chat-history');
+            const messageId = 'msg_' + Date.now();
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${type}`;
+            messageDiv.id = messageId;
+
+            const avatar = type === 'ai' ? '🤖' : '👤';
+            messageDiv.innerHTML = `
+                <div class="chat-avatar">${avatar}</div>
+                <div class="chat-bubble">${content}</div>
+            `;
+
+            history.appendChild(messageDiv);
+            history.scrollTop = history.scrollHeight;
+
+            return messageId;
+        }
+
+        function removeMessage(messageId) {
+            const message = document.getElementById(messageId);
+            if (message) {
+                message.remove();
+            }
+        }
+
+        function typewriterEffect(text) {
+            const messageId = addMessage('ai', '');
+            const bubble = document.querySelector(`#${messageId} .chat-bubble`);
+
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index < text.length) {
+                    bubble.textContent += text[index];
+                    index++;
+                    document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 30);
+        }
+
+        // ========== 爬虫数据获取函数 ==========
+        async function fetchCrawlerData() {
+            try {
+                console.log('正在请求爬虫服务:', CRAWLER_API_URL);
+
+                const response = await fetch(CRAWLER_API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('爬虫服务响应:', result);
+
+                // 解析响应数据
+                if (result.code === 0 && result.data) {
+                    return result.data;
+                } else {
+                    throw new Error('爬虫服务返回数据格式异常');
+                }
+
+            } catch (error) {
+                console.warn('⚠️ 爬虫数据获取失败:', error.message);
+                console.warn('提示: 请确保已启动爬虫服务 (运行 启动爬虫服务.bat)');
+                return null;
+            }
+        }
+    </script>
+</body>
+</html>
+
