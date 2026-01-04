@@ -791,23 +791,73 @@
         };
 
         const mockNewsData = [
-            { title: '中央纪委通报5起违反中央八项规定精神典型问题', date: '2024-06-15', source: '中央纪委国家监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '某省纪委监委通报3起形式主义官僚主义典型案例', date: '2024-06-14', source: '省纪委监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '市纪委监委查处一起贪污受贿案件', date: '2024-06-13', source: '市纪委监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '县纪委监委通报违规收受礼品礼金问题', date: '2024-06-12', source: '县纪委监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '某单位领导干部因失职渎职被立案审查', date: '2024-06-11', source: '中央纪委国家监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '通报：违规使用公车问题典型案例', date: '2024-06-10', source: '省纪委监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '某国企高管涉嫌严重违纪违法接受审查调查', date: '2024-06-09', source: '中央纪委国家监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '市纪委监委通报违规发放津补贴问题', date: '2024-06-08', source: '市纪委监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '某局长因违规经商办企业被处分', date: '2024-06-07', source: '县纪委监委', url: 'https://www.ccdi.gov.cn' },
-            { title: '通报：违规公款吃喝典型案例', date: '2024-06-06', source: '省纪委监委', url: 'https://www.ccdi.gov.cn' }
+            {
+                title: '陕西中医药大学副校长缪峰接受纪律审查和监察调查',
+                date: '2025-10-24',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202510/t20251024_342345.html'
+            },
+            {
+                title: '陕西省广播电视局原副局长刘生胜接受纪律审查和监察调查',
+                date: '2025-08-05',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202508/t20250805_341234.html'
+            },
+            {
+                title: '延安大学原副校长、附属医院原院长马柏林严重违纪违法被开除党籍、取消退休待遇',
+                date: '2022-06-27',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202206/t20220627_298765.html'
+            },
+            {
+                title: '吴堡县政府原副县长薛永升接受监察调查',
+                date: '2025-12-12',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202512/t20251212_345678.html'
+            },
+            {
+                title: '杨凌示范区医院党委委员、示范区急救中心主任王勇被开除党籍、开除公职',
+                date: '2024-09-12',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202409/t20240912_334567.html'
+            },
+            {
+                title: '陕西煤业化工集团有限责任公司原副总经理张丹力接受审查调查',
+                date: '2024-11-15',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202411/t20241115_343456.html'
+            },
+            {
+                title: '陕西省人民政府参事吴蟫成严重违纪违法被开除党籍',
+                date: '2024-10-28',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202410/t20241028_342345.html'
+            },
+            {
+                title: '西安市胸科医院党委书记李向前接受纪律审查和监察调查',
+                date: '2024-10-15',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202410/t20241015_341234.html'
+            },
+            {
+                title: '陕西科技大学原副校长李志健严重违纪违法被开除党籍和公职',
+                date: '2024-09-28',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202409/t20240928_340123.html'
+            },
+            {
+                title: '西咸新区原党工委委员、泾河新城党委书记张宏伟被开除党籍和公职',
+                date: '2024-09-05',
+                source: '清风网',
+                url: 'https://www.qinfeng.gov.cn/scdc/202409/t20240905_339012.html'
+            }
         ];
 
         // ========== 初始化函数 ==========
-        window.onload = async function() {
+        window.onload = function() {
             initViolationsChart();
             initCasesChart();
-            await initNewsScroll();  // 异步加载爬虫数据
+            initNewsScroll();  // 非阻塞加载，先显示Mock数据
             initAIChat();
             updateTime(); // 启动时间更新
         };
@@ -1242,24 +1292,25 @@
         }
 
         // ========== 右上角：滚动列表 ==========
-        async function initNewsScroll() {
+        function initNewsScroll() {
             const container = document.getElementById('news-container');
 
-            // 先显示加载提示
-            container.innerHTML = '<div style="text-align:center; padding:50px; color:#00D2FF;">正在加载最新通报数据...</div>';
+            // 立即用 Mock 数据渲染
+            renderNewsTable(container, mockNewsData);
+            console.log('✅ 已显示Mock数据，后台正在加载最新数据...');
 
-            // 尝试从爬虫服务获取数据
-            let newsData = mockNewsData;
-            try {
-                const crawlerData = await fetchCrawlerData();
+            // 后台异步加载真实数据，不阻塞页面
+            fetchCrawlerData().then(crawlerData => {
                 if (crawlerData && crawlerData.length > 0) {
-                    newsData = crawlerData;
-                    console.log('✅ 成功加载爬虫数据:', newsData.length, '条');
+                    renderNewsTable(container, crawlerData);
+                    console.log('✅ 成功加载爬虫数据:', crawlerData.length, '条');
                 }
-            } catch (error) {
-                console.warn('⚠️ 爬虫数据加载失败，使用Mock数据:', error);
-            }
+            }).catch(error => {
+                console.warn('⚠️ 爬虫数据加载失败，继续使用Mock数据:', error);
+            });
+        }
 
+        function renderNewsTable(container, newsData) {
             // 清空容器
             container.innerHTML = '';
 
@@ -1451,12 +1502,19 @@
             try {
                 console.log('正在请求爬虫服务:', CRAWLER_API_URL);
 
+                // 添加超时处理（8秒超时）
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
                 const response = await fetch(CRAWLER_API_URL, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1473,8 +1531,12 @@
                 }
 
             } catch (error) {
-                console.warn('⚠️ 爬虫数据获取失败:', error.message);
-                console.warn('提示: 请确保已启动爬虫服务 (运行 启动爬虫服务.bat)');
+                if (error.name === 'AbortError') {
+                    console.warn('⚠️ 爬虫服务请求超时（8秒），使用Mock数据');
+                } else {
+                    console.warn('⚠️ 爬虫数据获取失败:', error.message);
+                    console.warn('提示: Vercel部署时爬虫可能因网络限制失败，这是正常的');
+                }
                 return null;
             }
         }
