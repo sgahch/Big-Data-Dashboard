@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ren:*)",
+      "Bash(mv:*)",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" status)",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" diff)",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" log --oneline -5)",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" add .)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

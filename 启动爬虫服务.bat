@@ -25,7 +25,7 @@ echo [3/3] 启动爬虫服务...
 echo 服务将运行在 http://localhost:5000
 echo 按 Ctrl+C 可停止服务
 echo.
-python crawler_server.py
+python server.py
 
 pause
 
