@@ -771,7 +771,9 @@
         const COZE_BOT_ID = "7584448825868189732";
         const COZE_API_KEY = "pat_XAXCUN8690km9Kp0sXJbiYzxZkNOB3Bm4taHyDc29FcMkXHLg1akdTwXZIUTnTxz";
         const COZE_CHAT_URL = "https://api.coze.cn/open_api/v2/chat";  // 使用v2 API（同步返回）
-        const CRAWLER_API_URL = "http://localhost:5000/api/news";  // 本地爬虫服务地址
+        const CRAWLER_API_URL = window.location.hostname === 'localhost'
+            ? "http://localhost:5000/api/news"
+            : "/api/news";  // Vercel 部署时使用相对路径
 
         // ========== Mock数据 ==========
         const mockViolationsData = [

@@ -6,7 +6,12 @@
       "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" status)",
       "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" diff)",
       "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" log --oneline -5)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" add .)"
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" add .)",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfix: rename crawler_server.py to server.py for Vercel compatibility\n\n- Rename crawler_server.py to server.py to match Vercel''s Flask entrypoint detection\n- Update 启动爬虫服务.bat to use the new filename\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" push)",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" add vercel.json)",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfeat: add vercel.json config for static frontend deployment\n\n- Configure rewrites to serve index.html as the main entry point\n- API routes are forwarded to server.py backend\n- Ensures Vercel deploys as a static website with Flask API support\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfix: configure Vercel as static site deployment\n\n- Set framework to null to prevent Python detection\n- Use relative API URL for Vercel deployment\n- All routes now serve index.html\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
