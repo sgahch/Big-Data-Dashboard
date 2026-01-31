@@ -1,19 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ren:*)",
-      "Bash(mv:*)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" status)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" diff)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" log --oneline -5)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" add .)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfix: rename crawler_server.py to server.py for Vercel compatibility\n\n- Rename crawler_server.py to server.py to match Vercel''s Flask entrypoint detection\n- Update 启动爬虫服务.bat to use the new filename\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" push)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" add vercel.json)",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfeat: add vercel.json config for static frontend deployment\n\n- Configure rewrites to serve index.html as the main entry point\n- API routes are forwarded to server.py backend\n- Ensures Vercel deploys as a static website with Flask API support\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfix: configure Vercel as static site deployment\n\n- Set framework to null to prevent Python detection\n- Use relative API URL for Vercel deployment\n- All routes now serve index.html\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfeat: add Vercel Serverless Function for crawler API\n\n- Create api/news.py as Vercel Serverless Function\n- Migrate crawler logic from Flask to Vercel handler\n- Update vercel.json to properly route API calls\n- API now works at /api/news endpoint on Vercel\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git -C \"C:\\Users\\Ynchen\\Desktop\\大数据看板\" commit -m \"$(cat <<''EOF''\nfix: optimize frontend loading performance and fix mock data URLs\n\nFrontend improvements:\n- Remove async/await blocking in initNewsScroll()\n- Page now renders immediately with mock data\n- Real data loads in background without blocking UI\n- Add 8-second timeout for crawler API requests\n\nMock data fixes:\n- Update all mock news URLs to real qinfeng.gov.cn article links\n- All 10 mock items now have proper article URLs\n\nThis ensures:\n- Chat bot and scrolling list display immediately on page load\n- No waiting for slow crawler API\n- Mock data with working URLs as fallback\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(python:*)",
+      "Bash(set PYTHONIOENCODING=utf-8:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:www.qinfeng.gov.cn)",
+      "WebFetch(domain:xian.qinfeng.gov.cn)",
+      "Bash(chcp:*)",
+      "Bash(pip install:*)",
+      "Bash(timeout:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(ping:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
