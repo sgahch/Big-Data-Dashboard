@@ -310,3 +310,157 @@ class CurrentUserView(APIView):
                 'date_joined': user.date_joined.isoformat()
             }
         })
+
+
+# ========== Coze AI客服代理API ==========
+import os
+import time as time_module
+
+# Coze API 配置（从环境变量读取）
+COZE_API_TOKEN = os.environ.get('COZE_API_TOKEN', 'cztei_qB2AFxhYWesY9WyV1VktPi6FRFNm5247CIm4yCrYz8203EeZ4vTVIqpmZo7R0789M')
+COZE_BOT_ID = os.environ.get('COZE_BOT_ID', '7584448825868189732')
+
+# 尝试导入 Coze SDK
+try:
+    from cozepy import Coze, TokenAuth, COZE_CN_BASE_URL, Message, ChatEventType
+    COZE_SDK_AVAILABLE = True
+except ImportError:
+    COZE_SDK_AVAILABLE = False
+    logger.warning("cozepy SDK 未安装，AI客服功能不可用")
+
+# 初始化 Coze 客户端
+_coze_client = None
+def get_coze_client():
+    """获取 Coze 客户端单例"""
+    global _coze_client
+    if _coze_client is None and COZE_SDK_AVAILABLE:
+        try:
+            _coze_client = Coze(
+                auth=TokenAuth(token=COZE_API_TOKEN),
+                base_url=COZE_CN_BASE_URL
+            )
+        except Exception as e:
+            logger.error(f"Coze客户端初始化失败: {e}")
+            return None
+    return _coze_client
+
+
+class AIChatView(APIView):
+    """AI客服聊天API"""
+    # 禁用 CSRF 检查（因为前端通过 AJAX 调用）
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        try:
+            data = request.data  # 使用 DRF 的 request.data
+            if not data:
+                return Response({
+                    'code': -1,
+                    'message': '请求解析失败',
+                    'data': None
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user_message = data.get('message', '')
+            if not user_message:
+                return Response({
+                    'code': -1,
+                    'message': '消息内容不能为空',
+                    'data': None
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user_id = data.get('user_id', f'user_{int(time_module.time())}')
+
+            logger.info(f"AI客服收到问题: {user_message}")
+
+            # 检查 SDK 是否可用
+            if not COZE_SDK_AVAILABLE:
+                return Response({
+                    'code': -1,
+                    'message': 'AI客服SDK未安装',
+                    'data': {'reply': '抱歉，AI服务暂时不可用，请联系管理员安装cozepy SDK。'}
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # 获取 Coze 客户端
+            coze = get_coze_client()
+            if not coze:
+                return Response({
+                    'code': -1,
+                    'message': 'AI客服初始化失败',
+                    'data': {'reply': '抱歉，AI服务暂时不可用。'}
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # 使用官方 SDK 调用流式聊天
+            ai_reply = ''
+            try:
+                for event in coze.chat.stream(
+                    bot_id=COZE_BOT_ID,
+                    user_id=str(user_id),
+                    additional_messages=[
+                        Message.build_user_question_text(user_message),
+                    ],
+                ):
+                    if event.event == ChatEventType.CONVERSATION_MESSAGE_DELTA:
+                        content = event.message.content
+                        if content:
+                            ai_reply += content
+
+                    if event.event == ChatEventType.CONVERSATION_CHAT_COMPLETED:
+                        logger.info(f"AI客服回复完成, 共{len(ai_reply)}字符")
+                        break
+
+            except Exception as e:
+                logger.error(f"Coze SDK调用错误: {e}")
+                return Response({
+                    'code': -1,
+                    'message': str(e),
+                    'data': {'reply': f'抱歉，AI服务暂时不可用: {str(e)}'}
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            if ai_reply:
+                return Response({
+                    'code': 0,
+                    'message': 'success',
+                    'data': {'reply': ai_reply}
+                })
+            else:
+                return Response({
+                    'code': -1,
+                    'message': '未获取到AI回复',
+                    'data': {'reply': '抱歉，AI服务暂时无响应，请稍后再试。'}
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            logger.error(f"AI客服异常: {e}")
+            return Response({
+                'code': -1,
+                'message': str(e),
+                'data': {'reply': f'抱歉，AI服务暂时不可用: {str(e)}'}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        """检查AI服务健康状态"""
+        if not COZE_SDK_AVAILABLE:
+            return Response({
+                'code': -1,
+                'message': 'cozepy SDK未安装',
+                'data': {'status': 'error', 'sdk_available': False}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        coze = get_coze_client()
+        if coze:
+            return Response({
+                'code': 0,
+                'message': 'success',
+                'data': {
+                    'status': 'ready',
+                    'bot_id': COZE_BOT_ID,
+                    'sdk_available': True
+                }
+            })
+        else:
+            return Response({
+                'code': -1,
+                'message': 'Coze客户端初始化失败',
+                'data': {'status': 'error', 'sdk_available': True}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

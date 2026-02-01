@@ -56,10 +56,14 @@ class NewsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
 
-        # 筛选地区
+        # 筛选地区（支持代码如 'xian' 或 ID）
         region = self.request.query_params.get('region')
         if region and region != 'all':
-            qs = qs.filter(region_id=region)
+            # 尝试用代码匹配
+            qs = qs.filter(region__code=region)
+            # 如果没有匹配，尝试用ID匹配
+            if not qs.exists():
+                qs = super().get_queryset().filter(region_id=region)
 
         # 筛选标签
         tag = self.request.query_params.get('tag')

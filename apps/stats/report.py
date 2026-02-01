@@ -16,6 +16,10 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.utils import get_column_letter
+
 logger = logging.getLogger(__name__)
 
 
@@ -198,6 +202,150 @@ class WordReportGenerator(ReportGenerator):
                       f'日期：{news.get("date", "")}').font.size = Pt(10)
 
 
+class PDFReportGenerator(ReportGenerator):
+    """PDF报告生成器"""
+
+    def generate(self, data=None, **kwargs):
+        """生成PDF报告"""
+        try:
+            from xhtml2pdf import pisa
+        except ImportError:
+            # xhtml2pdf 不可用，尝试 weasyprint
+            try:
+                from weasyprint import HTML
+                html_content = self._generate_html(data)
+                output = io.BytesIO()
+                HTML(string=html_content).write_pdf(output)
+                output.seek(0)
+                return output
+            except Exception as e:
+                logger.error(f"WeasyPrint also failed: {e}")
+                raise ImportError("PDF生成需要 xhtml2pdf 或 weasyprint，请安装相关依赖")
+
+        # 使用 xhtml2pdf 生成 PDF
+        html_content = self._generate_html(data)
+        output = io.BytesIO()
+
+        pisa_status = pisa.CreatePDF(
+            html_content,
+            dest=output,
+            encoding='utf-8'
+        )
+
+        if pisa_status.err:
+            raise Exception("PDF生成失败")
+
+        output.seek(0)
+        return output
+
+    def _generate_html(self, data):
+        """生成报告HTML"""
+        summary = data.get('summary', {})
+        violations = data.get('violations', [])
+        cases = data.get('cases', {})
+        regions = data.get('regions', [])
+        recent_news = data.get('recent_news', [])
+
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+            <meta charset="UTF-8">
+            <title>{self.title}</title>
+            <style>
+                @page {{ size: A4; margin: 2cm }}
+                body {{ font-family: 'SimSun', '宋体', sans-serif; font-size: 12px; color: #333; line-height: 1.6 }}
+                h1 {{ color: #1a4a8c; text-align: center; font-size: 24px; margin-bottom: 10px }}
+                h2 {{ color: #2c5aa0; border-bottom: 2px solid #2c5aa0; padding-bottom: 8px; margin-top: 30px }}
+                h3 {{ color: #3d6cb8; margin-top: 20px }}
+                .meta {{ text-align: center; color: #666; font-size: 10px; margin-bottom: 30px }}
+                table {{ width: 100%; border-collapse: collapse; margin: 15px 0 }}
+                th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left }}
+                th {{ background-color: #00D2FF; color: #fff; font-weight: bold }}
+                tr:nth-child(even) {{ background-color: #f9f9f9 }}
+                .summary-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0 }}
+                .summary-card {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center }}
+                .summary-card .value {{ font-size: 28px; font-weight: bold }}
+                .summary-card .label {{ font-size: 12px; opacity: 0.9 }}
+                .news-item {{ padding: 10px 0; border-bottom: 1px solid #eee }}
+                .news-item:last-child {{ border-bottom: none }}
+            </style>
+        </head>
+        <body>
+            <h1>{self.title}</h1>
+            <div class="meta">
+                <p>生成时间：{self.generated_at.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p>数据来源：清风网</p>
+            </div>
+
+            <h2>一、数据概览</h2>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="value">{summary.get('total_news', 0)}</div>
+                    <div class="label">总新闻数</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value">{summary.get('today_news', 0)}</div>
+                    <div class="label">今日新增</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value">{summary.get('yesterday_news', 0)}</div>
+                    <div class="label">昨日新增</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value">{summary.get('active_regions', 0)}</div>
+                    <div class="label">活跃地区</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value">{summary.get('today_crawled', 0)}</div>
+                    <div class="label">今日爬取</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value">{summary.get('today_new', 0)}</div>
+                    <div class="label">今日新增</div>
+                </div>
+            </div>
+
+            <h2>二、违规事项分布</h2>
+            <table>
+                <tr><th>排名</th><th>违规类型</th><th>数量</th></tr>
+                {''.join(f"<tr><td>{i+1}</td><td>{v.get('name', '')}</td><td>{v.get('value', 0)}</td></tr>" for i, v in enumerate(violations[:15]))}
+            </table>
+
+            <h2>三、案件查处趋势</h2>
+            <table>
+                <tr><th>月份</th><th>案件数</th><th>环比变化</th></tr>
+                {''.join(f"<tr><td>{m}</td><td>{v}</td><td>{'-' if i == 0 else self._calc_change(values, i)}</td></tr>" for i, (m, v) in enumerate(zip(cases.get('months', []), cases.get('values', []))))}
+            </table>
+
+            <h2>四、地区分布统计</h2>
+            <table>
+                <tr><th>地区</th><th>新闻数量</th><th>占比</th></tr>
+                {''.join(f"<tr><td>{r.get('region__name', r.get('name', ''))}</td><td>{r.get('count', 0)}</td><td>{self._calc_percentage(regions, r)}%</td></tr>" for r in regions)}
+            </table>
+
+            <h2>五、最新通报案例</h2>
+            {''.join(f"<div class='news-item'><strong>{n.get('title', '')}</strong><br><small>来源：{n.get('region_name', '')} | 日期：{n.get('date', '')}</small></div>" for n in recent_news[:20])}
+        </body>
+        </html>
+        """
+        return html
+
+    def _calc_change(self, values, index):
+        """计算环比变化"""
+        if index > 0 and values[index-1] > 0:
+            change = (values[index] - values[index-1]) / values[index-1] * 100
+            return f'{change:+.1f}%'
+        return '-'
+
+    def _calc_percentage(self, regions, region):
+        """计算占比"""
+        total = sum(r.get('count', 0) for r in regions)
+        if total > 0:
+            return f'{region.get("count", 0) / total * 100:.1f}'
+        return '0'
+
+
 class ExcelReportGenerator(ReportGenerator):
     """Excel报告生成器"""
 
@@ -330,7 +478,7 @@ def generate_report(report_type='word', data=None, **kwargs):
     生成报告的统一入口
 
     Args:
-        report_type: 报告类型 ('word', 'excel')
+        report_type: 报告类型 ('word', 'excel', 'pdf')
         data: 报告数据
         **kwargs: 其他参数
 
@@ -340,6 +488,7 @@ def generate_report(report_type='word', data=None, **kwargs):
     generators = {
         'word': WordReportGenerator,
         'excel': ExcelReportGenerator,
+        'pdf': PDFReportGenerator,
     }
 
     generator_class = generators.get(report_type, WordReportGenerator)
@@ -392,12 +541,12 @@ def get_report_data(start_date=None, end_date=None, region=None):
     ]
 
     # 案件趋势（近12月）
-    cases_stats = (News.objects
+    cases_stats = list((News.objects
                    .filter(status='published')
                    .annotate(month=TruncMonth('crawl_time'))
                    .values('month')
                    .annotate(count=Count('id'))
-                   .order_by('month')[-12:])
+                   .order_by('month')))[-12:]
 
     cases = {
         'months': [item['month'].strftime('%Y-%m') for item in cases_stats],

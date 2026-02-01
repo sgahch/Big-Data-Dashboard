@@ -47,9 +47,79 @@ class CasesStatsView(APIView):
     """案件查处统计"""
 
     def get(self, request):
+        # 获取筛选参数
+        date_str = request.query_params.get('date')  # 格式: 2026-01-31
+        start_date = request.query_params.get('start_date')  # 开始日期
+        end_date = request.query_params.get('end_date')  # 结束日期
+        group_by = request.query_params.get('group_by', 'month')  # month, day, year
+
+        # 构建查询
+        queryset = News.objects.filter(status='published')
+
+        # 单日筛选
+        if date_str:
+            try:
+                target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                queryset = queryset.filter(date=target_date)
+            except ValueError:
+                return Response({'code': -1, 'message': '日期格式错误，请使用 YYYY-MM-DD'})
+
+        # 日期范围筛选
+        if start_date:
+            try:
+                start = datetime.strptime(start_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(date__gte=start)
+            except ValueError:
+                return Response({'code': -1, 'message': '开始日期格式错误'})
+
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(date__lte=end)
+            except ValueError:
+                return Response({'code': -1, 'message': '结束日期格式错误'})
+
+        # 如果指定了日期参数，返回该日期范围内的新闻列表
+        if date_str or (start_date and end_date):
+            news_items = list(queryset.order_by('-date', '-crawl_time'))
+
+            # 按标签统计
+            tag_stats = {}
+            for n in news_items:
+                tags = n.get_tag_names_list()
+                for tag in tags:
+                    tag_stats[tag] = tag_stats.get(tag, 0) + 1
+
+            # 转换为列表格式
+            tag_chart = [
+                {'name': k, 'value': v}
+                for k, v in sorted(tag_stats.items(), key=lambda x: x[1], reverse=True)
+            ]
+
+            result = {
+                'type': 'list',
+                'date': date_str,
+                'start_date': start_date,
+                'end_date': end_date,
+                'total': len(news_items),
+                'news': [{
+                    'id': n.id,
+                    'title': n.title,
+                    'date': n.date.strftime('%Y-%m-%d') if n.date else None,
+                    'region_name': n.region_name,
+                    'source': n.source,
+                    'tags': n.get_tag_names_list(),
+                } for n in news_items],
+                'tag_stats': tag_chart
+            }
+            return Response({'code': 0, 'data': result})
+
+        # 否则返回月度统计（默认行为）
         months = int(request.query_params.get('months', 12))
+        # 缓存 key 包含月份参数
         cache_key = f'stats_cases_{months}'
 
+        # 只有月度统计才使用缓存，日期筛选不使用缓存
         cached = cache.get(cache_key)
         if cached is not None:
             return Response({'code': 0, 'data': cached})
@@ -70,9 +140,25 @@ class CasesStatsView(APIView):
         months_list = [m[0] for m in sorted_months]
         values_list = [m[1] for m in sorted_months]
 
+        # 标签统计（按月份汇总）
+        news_all = News.objects.filter(status='published')
+        tag_counts = {}
+        for n in news_all:
+            tags = n.get_tag_names_list()
+            for tag in tags:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+        # 按标签排序
+        tag_stats = [
+            {'name': k, 'value': v}
+            for k, v in sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
+        ]
+
         result = {
+            'type': 'chart',
             'months': months_list,
-            'values': values_list
+            'values': values_list,
+            'tag_stats': tag_stats
         }
 
         cache.set(cache_key, result, CACHE_TIMEOUT)
@@ -281,6 +367,9 @@ class ArticlesStatsView(APIView):
 
 class ReportGenerateView(APIView):
     """报告生成API"""
+    # 禁用 CSRF 检查
+    authentication_classes = []
+    permission_classes = []
 
     def get(self, request):
         """预览报告数据"""
@@ -317,7 +406,10 @@ class ReportGenerateView(APIView):
             )
 
             # 设置响应头
-            if report_type == 'word':
+            if report_type == 'pdf':
+                filename = f'纪检监察报告_{timezone.now().strftime("%Y%m%d")}.pdf'
+                content_type = 'application/pdf'
+            elif report_type == 'word':
                 filename = f'纪检监察报告_{timezone.now().strftime("%Y%m%d")}.docx'
                 content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             else:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet, GroupViewSet, RoleViewSet, CurrentUserView
+from .views import UserViewSet, GroupViewSet, RoleViewSet, CurrentUserView, AIChatView
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
@@ -10,5 +10,10 @@ router.register(r'roles', RoleViewSet, basename='role')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('users/me/', CurrentUserView.as_view(), name='current-user'),
+    path('users/me', CurrentUserView.as_view(), name='current-user'),
+    path('users/me/', CurrentUserView.as_view(), name='current-user-slash'),
+    path('ai/chat', AIChatView.as_view(), name='ai-chat'),
+    path('ai/chat/', AIChatView.as_view(), name='ai-chat-slash'),
+    path('ai/health', AIChatView.as_view(), name='ai-health'),
+    path('ai/health/', AIChatView.as_view(), name='ai-health-slash'),
 ]

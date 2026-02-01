@@ -1433,6 +1433,14 @@
         <!-- 左下角：案件查处统计 -->
         <div class="panel" id="panel-cases">
             <h2 class="panel-title"><i class="fas fa-chart-bar"></i> 案件查处统计</h2>
+            <div class="date-filter" style="padding: 10px 15px; display: flex; gap: 10px; align-items: center;">
+                <label style="color: #00D2FF; font-size: 12px;">日期筛选：</label>
+                <input type="date" id="cases-start-date" style="background: rgba(0,210,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 8px; border-radius: 4px;">
+                <span style="color: #00D2FF;">至</span>
+                <input type="date" id="cases-end-date" style="background: rgba(0,210,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 8px; border-radius: 4px;">
+                <button onclick="filterCasesByDate()" style="background: linear-gradient(135deg, #00D2FF, #0080FF); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">查询</button>
+                <button onclick="resetCasesFilter()" style="background: rgba(255,255,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">重置</button>
+            </div>
             <div id="chart-cases" class="chart-container"></div>
         </div>
         
@@ -2148,136 +2156,198 @@
 
         // ========== 左下角：案件查处统计 ==========
         function initCasesChart() {
-            const chart = echarts.init(document.getElementById('chart-cases'));
+            const chartDiv = document.getElementById('chart-cases');
+
+            // 先销毁旧图表实例
+            if (casesChart) {
+                casesChart.dispose();
+                casesChart = null;
+            }
+
+            // 清空容器
+            chartDiv.innerHTML = '';
+
+            // 重新初始化图表
+            casesChart = echarts.init(chartDiv);
 
             // 从数据库获取真实统计数据
             fetch('/api/stats/cases?months=12')
                 .then(response => response.json())
                 .then(result => {
-                    let months = result.data?.months || [];
-                    let values = result.data?.values || [];
+                    const tagStats = result.data?.tag_stats || [];
 
                     // 如果没有数据，使用Mock
-                    if (months.length === 0 || values.length === 0) {
-                        months = mockCasesData.months;
-                        values = mockCasesData.values;
+                    if (tagStats.length === 0) {
+                        // 使用Mock标签数据
+                        const mockTags = [
+                            {'name': '执纪审查', 'value': 45},
+                            {'name': '党纪处分', 'value': 32},
+                            {'name': '省管干部', 'value': 18},
+                            {'name': '市管干部', 'value': 56},
+                            {'name': '县管干部', 'value': 89},
+                            {'name': '贪污受贿', 'value': 67},
+                            {'name': '滥用职权', 'value': 34},
+                            {'name': '形式主义', 'value': 28}
+                        ];
+                        renderTagChart(mockTags);
+                        return;
                     }
 
-                    // 计算增长率
-                    const growthRate = values.map((val, idx) => {
-                        if (idx === 0) return 0;
-                        const prev = values[idx - 1];
-                        if (prev === 0) return 0;
-                        return ((val - prev) / prev * 100).toFixed(1);
-                    });
-
-                    const option = {
-                        backgroundColor: 'transparent',
-                        title: {
-                            text: '月度趋势分析',
-                            left: 'center', top: '3%',
-                            textStyle: { color: '#00D2FF', fontSize: 16, fontWeight: 'bold' }
-                        },
-                        tooltip: {
-                            trigger: 'axis',
-                            axisPointer: { type: 'cross' },
-                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                            borderColor: '#00D2FF', borderWidth: 2,
-                            textStyle: { color: '#00D2FF', fontSize: 13 }
-                        },
-                        legend: {
-                            data: ['案件数', '趋势线', '环比增长率'],
-                            top: '3%', right: '5%',
-                            textStyle: { color: '#00D2FF', fontSize: 12 }
-                        },
-                        grid: {
-                            left: '8%', right: '8%', bottom: '15%', top: '18%', containLabel: true
-                        },
-                        xAxis: {
-                            type: 'category',
-                            data: months,
-                            axisLine: { lineStyle: { color: 'rgba(0, 210, 255, 0.5)', width: 2 } },
-                            axisLabel: { color: '#00D2FF', fontSize: 12, fontWeight: 'bold' }
-                        },
-                        yAxis: [
-                            {
-                                type: 'value',
-                                name: '案件数(件)',
-                                position: 'left',
-                                nameTextStyle: { color: '#00D2FF', fontSize: 13, fontWeight: 'bold' },
-                                axisLine: { lineStyle: { color: 'rgba(0, 210, 255, 0.5)', width: 2 } },
-                                axisLabel: { color: '#00D2FF', fontSize: 12, formatter: '{value}' },
-                                splitLine: { lineStyle: { color: 'rgba(0, 210, 255, 0.1)', type: 'dashed' } }
-                            },
-                            {
-                                type: 'value',
-                                name: '增长率(%)',
-                                position: 'right',
-                                nameTextStyle: { color: '#9933FF', fontSize: 13, fontWeight: 'bold' },
-                                axisLine: { lineStyle: { color: 'rgba(153, 51, 255, 0.5)', width: 2 } },
-                                axisLabel: { color: '#9933FF', fontSize: 12, formatter: '{value}%' },
-                                splitLine: { show: false }
-                            }
-                        ],
-                        series: [
-                            {
-                                name: '案件数',
-                                type: 'bar',
-                                barWidth: '40%',
-                                itemStyle: {
-                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                        { offset: 0, color: 'rgba(0, 210, 255, 0.9)' },
-                                        { offset: 0.5, color: 'rgba(0, 128, 255, 0.7)' },
-                                        { offset: 1, color: 'rgba(153, 51, 255, 0.5)' }
-                                    ]),
-                                    borderRadius: [8, 8, 0, 0]
-                                },
-                                label: {
-                                    show: true, position: 'top',
-                                    color: '#00D2FF', fontSize: 11, fontWeight: 'bold',
-                                    formatter: '{c}件'
-                                },
-                                data: values
-                            },
-                            {
-                                name: '趋势线',
-                                type: 'line',
-                                smooth: true,
-                                symbol: 'circle',
-                                symbolSize: 8,
-                                lineStyle: { color: '#FF6B9D', width: 3 },
-                                itemStyle: { color: '#FF6B9D', borderColor: '#fff', borderWidth: 2 },
-                                areaStyle: {
-                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                        { offset: 0, color: 'rgba(255, 107, 157, 0.5)' },
-                                        { offset: 1, color: 'rgba(255, 107, 157, 0.05)' }
-                                    ])
-                                },
-                                data: values
-                            },
-                            {
-                                name: '环比增长率',
-                                type: 'line',
-                                yAxisIndex: 1,
-                                smooth: true,
-                                symbol: 'diamond',
-                                symbolSize: 6,
-                                lineStyle: { color: '#9933FF', width: 2, type: 'dashed' },
-                                itemStyle: { color: '#9933FF', borderColor: '#fff', borderWidth: 1 },
-                                data: growthRate
-                            }
-                        ]
-                    };
-                    chart.setOption(option);
-                    window.addEventListener('resize', () => chart.resize());
+                    renderTagChart(tagStats);
                 })
                 .catch(error => {
-                    console.warn('获取案件统计数据失败，使用Mock数据:', error);
-                    renderCasesWithMock(chart);
+                    console.warn('获取案件统计数据失败:', error);
+                    // 使用默认标签数据
+                    const defaultTags = [
+                        {'name': '执纪审查', 'value': 10},
+                        {'name': '党纪处分', 'value': 8},
+                        {'name': '省管干部', 'value': 5},
+                        {'name': '市管干部', 'value': 15}
+                    ];
+                    renderTagChart(defaultTags);
                 });
         }
 
-        function renderCasesWithMock(chart) {
+        // 渲染标签分布图表（柱状图 + 折线图）
+        function renderTagChart(tagStats) {
+            const tagNames = tagStats.map(t => t.name);
+            const tagValues = tagStats.map(t => t.value);
+            const total = tagValues.reduce((a, b) => a + b, 0);
+
+            // 计算占比作为折线图数据
+            const percentages = tagValues.map(v => ((v / total) * 100).toFixed(1));
+
+            // 计算趋势线（累积）
+            const cumulative = [];
+            let cumSum = 0;
+            for (let v of tagValues) {
+                cumSum += v;
+                cumulative.push(cumSum);
+            }
+
+            const option = {
+                backgroundColor: 'transparent',
+                title: {
+                    text: '违规类型分布统计',
+                    subtext: `总计 ${total} 条案件`,
+                    left: 'center', top: '3%',
+                    textStyle: { color: '#00D2FF', fontSize: 16, fontWeight: 'bold' },
+                    subtextStyle: { color: '#888', fontSize: 12 }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' },
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    borderColor: '#00D2FF',
+                    borderWidth: 1,
+                    textStyle: { color: '#00D2FF' },
+                    formatter: function(params) {
+                        let result = `${params[0].axisValue}<br/>`;
+                        params.forEach(p => {
+                            const marker = `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>`;
+                            const value = p.seriesName === '占比' ? `${p.value}%` : `${p.value}件`;
+                            result += `${marker}${p.seriesName}: ${value}<br/>`;
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['案件数', '占比(%)', '累积趋势'],
+                    top: '3%',
+                    right: '5%',
+                    textStyle: { color: '#00D2FF', fontSize: 12 }
+                },
+                grid: {
+                    left: '8%', right: '8%', bottom: '20%', top: '18%', containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: tagNames,
+                    axisLabel: { color: '#00D2FF', fontSize: 11, rotate: 30 },
+                    axisLine: { lineStyle: { color: 'rgba(0, 210, 255, 0.5)', width: 2 } }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '案件数(件)',
+                        position: 'left',
+                        nameTextStyle: { color: '#00D2FF', fontSize: 12, fontWeight: 'bold' },
+                        axisLabel: { color: '#00D2FF', fontSize: 11 },
+                        axisLine: { lineStyle: { color: 'rgba(0, 210, 255, 0.5)', width: 2 } },
+                        splitLine: { lineStyle: { color: 'rgba(0, 210, 255, 0.1)', type: 'dashed' } }
+                    },
+                    {
+                        type: 'value',
+                        name: '占比(%)',
+                        position: 'right',
+                        nameTextStyle: { color: '#9933FF', fontSize: 12, fontWeight: 'bold' },
+                        axisLabel: { color: '#9933FF', fontSize: 11, formatter: '{value}%' },
+                        axisLine: { lineStyle: { color: 'rgba(153, 51, 255, 0.5)', width: 2 } },
+                        splitLine: { show: false },
+                        max: 100
+                    }
+                ],
+                series: [
+                    {
+                        name: '案件数',
+                        type: 'bar',
+                        barWidth: '50%',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(0, 210, 255, 0.9)' },
+                                { offset: 0.5, color: 'rgba(0, 128, 255, 0.7)' },
+                                { offset: 1, color: 'rgba(153, 51, 255, 0.5)' }
+                            ]),
+                            borderRadius: [6, 6, 0, 0]
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            color: '#00D2FF',
+                            fontSize: 10,
+                            fontWeight: 'bold',
+                            formatter: '{c}'
+                        },
+                        data: tagValues
+                    },
+                    {
+                        name: '占比(%)',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        lineStyle: { color: '#FF6B9D', width: 2 },
+                        itemStyle: { color: '#FF6B9D', borderColor: '#fff', borderWidth: 2 },
+                        data: percentages
+                    },
+                    {
+                        name: '累积趋势',
+                        type: 'line',
+                        symbol: 'diamond',
+                        symbolSize: 6,
+                        lineStyle: { color: '#3EECAC', width: 2, type: 'dashed' },
+                        itemStyle: { color: '#3EECAC' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(62, 236, 172, 0.3)' },
+                                { offset: 1, color: 'rgba(62, 236, 172, 0.05)' }
+                            ])
+                        },
+                        data: cumulative
+                    }
+                ]
+            };
+
+            casesChart.setOption(option, true);
+            window.addEventListener('resize', () => casesChart.resize());
+        }
+
+        function renderCasesWithMock() {
+            const chartDiv = document.getElementById('chart-cases');
+            if (!casesChart) {
+                casesChart = echarts.init(chartDiv);
+            }
+
             const option = {
                 backgroundColor: 'transparent',
                 title: {
@@ -2372,8 +2442,81 @@
                     }
                 ]
             };
-            chart.setOption(option);
-            window.addEventListener('resize', () => chart.resize());
+            casesChart.setOption(option, true);
+            window.addEventListener('resize', () => casesChart.resize());
+        }
+
+        function renderCasesWithMock() {
+            // 使用默认标签数据渲染
+            const defaultTags = [
+                {'name': '执纪审查', 'value': 15},
+                {'name': '党纪处分', 'value': 12},
+                {'name': '省管干部', 'value': 8},
+                {'name': '市管干部', 'value': 20},
+                {'name': '县管干部', 'value': 25},
+                {'name': '贪污受贿', 'value': 18},
+                {'name': '滥用职权', 'value': 10},
+                {'name': '形式主义', 'value': 14}
+            ];
+            renderTagChart(defaultTags);
+        }
+
+        // ========== 案件查处统计：日期筛选 ==========
+        let casesChart = null;
+        let isFilteredMode = false;
+
+        function filterCasesByDate() {
+            const startDate = document.getElementById('cases-start-date').value;
+            const endDate = document.getElementById('cases-end-date').value;
+            const chartDiv = document.getElementById('chart-cases');
+
+            if (!startDate || !endDate) {
+                alert('请选择开始日期和结束日期');
+                return;
+            }
+
+            // 先销毁旧图表实例
+            if (casesChart) {
+                casesChart.dispose();
+                casesChart = null;
+            }
+
+            // 显示加载状态
+            chartDiv.innerHTML = '<div style="color: #00D2FF; text-align: center; padding: 50px;">加载中...</div>';
+
+            let url = `/api/stats/cases?start_date=${startDate}&end_date=${endDate}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.code !== 0) {
+                        throw new Error(result.message || '请求失败');
+                    }
+
+                    const data = result.data;
+
+                    if (data.type === 'list' && data.tag_stats) {
+                        // 清空加载状态，准备渲染图表
+                        chartDiv.innerHTML = '';
+                        casesChart = echarts.init(chartDiv);
+                        isFilteredMode = true;
+                        renderTagChart(data.tag_stats);
+                    } else {
+                        initCasesChart();
+                    }
+                })
+                .catch(error => {
+                    console.error('筛选失败:', error);
+                    chartDiv.innerHTML = `<div style="color: #FF6B9D; text-align: center; padding: 50px;">筛选失败: ${error.message}</div>`;
+                });
+        }
+
+        function resetCasesFilter() {
+            document.getElementById('cases-start-date').value = '';
+            document.getElementById('cases-end-date').value = '';
+            isFilteredMode = false;
+            // 重新加载默认图表
+            initCasesChart();
         }
 
         // ========== 右上角：滚动列表 ==========
@@ -2756,7 +2899,8 @@
         async function exportReport(type) {
             const btn = event.target;
             const originalText = btn.innerHTML;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 正在生成${type === 'word' ? 'Word' : 'Excel'}报告...`;
+            const typeName = type === 'word' ? 'Word' : (type === 'excel' ? 'Excel' : 'PDF');
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 正在生成${typeName}报告...`;
             btn.disabled = true;
 
             try {
@@ -2773,7 +2917,8 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `纪检监察报告_${new Date().toLocaleDateString()}.${type === 'word' ? 'docx' : 'xlsx'}`;
+                    const ext = type === 'word' ? 'docx' : (type === 'excel' ? 'xlsx' : 'pdf');
+                    a.download = `纪检监察报告_${new Date().toLocaleDateString()}.${ext}`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -3653,7 +3798,7 @@
 
     <!-- 报告导出模态框 -->
     <div id="report-modal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h3><i class="fas fa-file-export"></i> 导出报告</h3>
                 <span class="close-btn" onclick="document.getElementById('report-modal').style.display='none'">&times;</span>
@@ -3662,12 +3807,15 @@
                 <p style="text-align: center; margin-bottom: 20px; color: #a0d8ef;">
                     选择报告格式
                 </p>
-                <div style="display: flex; gap: 15px; justify-content: center;">
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <button class="btn btn-primary" onclick="exportReport('word')">
                         <i class="fas fa-file-word"></i> Word报告
                     </button>
                     <button class="btn btn-primary" onclick="exportReport('excel')">
                         <i class="fas fa-file-excel"></i> Excel报告
+                    </button>
+                    <button class="btn btn-primary" onclick="exportReport('pdf')">
+                        <i class="fas fa-file-pdf"></i> PDF报告
                     </button>
                 </div>
             </div>
