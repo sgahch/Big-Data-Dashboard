@@ -1,3 +1,13 @@
+# Flask (for standalone crawler server)
+Flask>=3.0.0
+flask-cors>=4.0.0
+
+# Data Analysis
+pandas>=2.0.0
+
+# AI Chat (Coze SDK) - Optional
+cozepy>=0.2.0
+
 # Django and extensions
 Django>=4.2,<5.0
 djangorestframework>=3.14.0
@@ -25,4 +35,5 @@ Pillow>=10.0.0
 python-docx>=1.1.0
 weasyprint>=60.0
 xhtml2pdf>=0.2.11
+reportlab>=4.0.0
 openpyxl>=3.1.0

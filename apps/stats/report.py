@@ -205,38 +205,200 @@ class WordReportGenerator(ReportGenerator):
 class PDFReportGenerator(ReportGenerator):
     """PDF报告生成器"""
 
+    def _get_font_path(self):
+        """获取可用的中文字体路径"""
+        import os
+        import platform
+
+        system = platform.system()
+
+        if system == 'Windows':
+            fonts = [
+                'C:/Windows/Fonts/msyh.ttc',      # 微软雅黑
+                'C:/Windows/Fonts/msyhbd.ttc',    # 微软雅黑粗体
+                'C:/Windows/Fonts/simhei.ttf',    # 黑体
+                'C:/Windows/Fonts/simsun.ttc',    # 宋体
+                'C:/Windows/Fonts/simkai.ttf',    # 楷体
+                'C:/Windows/Fonts/arial.ttf',     # Arial (fallback)
+            ]
+        elif system == 'Darwin':  # macOS
+            fonts = [
+                '/System/Library/Fonts/PingFang.ttc',
+                '/System/Library/Fonts/STHeiti Light.ttc',
+            ]
+        else:  # Linux
+            fonts = [
+                '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+                '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+                '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttf',
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            ]
+
+        for font_path in fonts:
+            normalized = font_path.replace('/', os.sep)
+            if os.path.exists(normalized):
+                logger.info(f"找到字体文件: {normalized}")
+                return normalized
+        logger.warning("未找到系统中文字体文件")
+        return None
+
     def generate(self, data=None, **kwargs):
         """生成PDF报告"""
-        try:
-            from xhtml2pdf import pisa
-        except ImportError:
-            # xhtml2pdf 不可用，尝试 weasyprint
-            try:
-                from weasyprint import HTML
-                html_content = self._generate_html(data)
-                output = io.BytesIO()
-                HTML(string=html_content).write_pdf(output)
-                output.seek(0)
-                return output
-            except Exception as e:
-                logger.error(f"WeasyPrint also failed: {e}")
-                raise ImportError("PDF生成需要 xhtml2pdf 或 weasyprint，请安装相关依赖")
+        import os
 
-        # 使用 xhtml2pdf 生成 PDF
+        # 先生成HTML
         html_content = self._generate_html(data)
-        output = io.BytesIO()
+        font_path = self._get_font_path()
 
-        pisa_status = pisa.CreatePDF(
-            html_content,
-            dest=output,
-            encoding='utf-8'
-        )
+        # 尝试使用 weasyprint（中文支持更好）
+        try:
+            from weasyprint import HTML, CSS
+            from weasyprint.text.fonts import FontConfiguration
 
-        if pisa_status.err:
-            raise Exception("PDF生成失败")
+            # 创建字体配置
+            font_config = FontConfiguration()
+            
+            extra_css = ''
+            if font_path:
+                # 使用系统中可用的字体
+                extra_css = f'''
+                <style>
+                    @font-face {{
+                        font-family: "ChineseFont";
+                        src: url("{font_path.replace(os.sep, '/')}") format("truetype");
+                        font-weight: normal;
+                        font-style: normal;
+                    }}
+                    body, h1, h2, h3, h4, h5, h6, table, th, td {{
+                        font-family: "ChineseFont", "Microsoft YaHei", "SimHei", "SimSun", "DejaVu Sans", sans-serif !important;
+                    }}
+                </style>
+                '''
+                # 在 HTML 头部插入字体样式
+                html_content = html_content.replace('</head>', f'{extra_css}</head>')
+            else:
+                # 如果没有找到字体，使用默认字体
+                html_content = html_content.replace('</head>', '''
+                <style>
+                    body, h1, h2, h3, h4, h5, h6, table, th, td {
+                        font-family: "DejaVu Sans", "Arial Unicode MS", sans-serif !important;
+                    }
+                </style>
+                </head>''')
 
-        output.seek(0)
-        return output
+            output = io.BytesIO()
+            HTML(string=html_content, base_url="file://").write_pdf(
+                output,
+                font_config=font_config
+            )
+            output.seek(0)
+            logger.info("使用 WeasyPrint 生成 PDF")
+            return output
+        except Exception as weasyprint_error:
+            logger.error(f"WeasyPrint failed: {weasyprint_error}")
+            # 如果WeasyPrint失败，记录错误并尝试其他方法
+
+        # 尝试使用 xhtml2pdf + ReportLab 注册字体
+        try:
+            import locale
+            import sys
+            from xhtml2pdf import pisa
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.ttfonts import TTFont
+            from reportlab.lib.fonts import addMapping
+
+            # 设置本地化
+            try:
+                if sys.platform.startswith('win'):
+                    locale.setlocale(locale.LC_ALL, 'Chinese_China.936')  # Windows中文环境
+                else:
+                    locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')
+            except:
+                try:
+                    locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+                except:
+                    pass  # 如果设置本地化失败，继续执行
+
+            output = io.BytesIO()
+
+            # 注册中文字体（如果字体文件存在）
+            if font_path:
+                try:
+                    # 尝试注册字体
+                    font_name = 'ChineseFont'
+                    pdfmetrics.registerFont(TTFont(font_name, font_path))
+                    # 注册字体映射
+                    addMapping(font_name, 0, 0, font_name)  # normal
+                    addMapping(font_name, 0, 1, font_name)  # italic
+                    addMapping(font_name, 1, 0, font_name)  # bold
+                    addMapping(font_name, 1, 1, font_name)  # bold italic
+                    logger.info(f"成功注册字体: {font_path}")
+                    
+                    # 在HTML中添加字体样式 - 使用绝对路径（Windows需要file://协议）
+                    escaped_font_path = font_path.replace('\\', '/')
+                    font_css = f'''
+                    <style>
+                    @font-face {{ 
+                        font-family: 'ChineseFont'; 
+                        src: url('file:///{escaped_font_path}'); 
+                        font-weight: normal; 
+                        font-style: normal; 
+                    }}
+                    body, h1, h2, h3, h4, h5, h6, table, th, td {{
+                        font-family: 'ChineseFont', 'Microsoft YaHei', 'SimHei', 'SimSun', 'DejaVu Sans', sans-serif !important;
+                    }}
+                    </style>
+                    '''
+                    html_content = html_content.replace('</head>', f'{font_css}</head>')
+                except Exception as font_error:
+                    logger.warning(f"字体注册失败: {font_error}")
+                    # 如果字体注册失败，使用默认字体样式
+                    html_content = html_content.replace('</head>', '''
+                    <style>
+                    body, h1, h2, h3, h4, h5, h6, table, th, td {
+                        font-family: 'Microsoft YaHei', 'SimHei', 'SimSun', 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif !important;
+                    }
+                    </style>
+                    </head>''')
+            else:
+                # 如果没有找到字体，使用默认字体
+                html_content = html_content.replace('</head>', '''
+                <style>
+                body, h1, h2, h3, h4, h5, h6, table, th, td {
+                    font-family: 'Microsoft YaHei', 'SimHei', 'SimSun', 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif !important;
+                }
+                </style>
+                </head>''')
+
+            # 创建PDF
+            pdf_status = pisa.CreatePDF(
+                html_content,
+                dest=output
+            )
+
+            # 检查是否有错误
+            if pdf_status.err:
+                logger.error(f"PDF生成错误: {pdf_status.err}")
+                # 即使有错误也尝试返回，因为有时虽然有警告但PDF仍可生成
+                if output.tell() > 0:
+                    output.seek(0)
+                    logger.info("使用 xhtml2pdf 生成 PDF，尽管有警告")
+                    return output
+                else:
+                    raise Exception(f"PDF生成错误码: {pdf_status.err}")
+
+            output.seek(0)
+            logger.info("使用 xhtml2pdf 生成 PDF")
+            return output
+
+        except ImportError as e:
+            logger.error(f"缺少依赖: {e}")
+            raise ImportError("请安装依赖: pip install weasyprint xhtml2pdf reportlab")
+        except Exception as e:
+            logger.error(f"PDF生成失败: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
     def _generate_html(self, data):
         """生成报告HTML"""
@@ -246,6 +408,32 @@ class PDFReportGenerator(ReportGenerator):
         regions = data.get('regions', [])
         recent_news = data.get('recent_news', [])
 
+        # 构建表格行
+        violations_rows = ''.join(
+            f"<tr><td>{i+1}</td><td>{v.get('name', '')}</td><td>{v.get('value', 0)}</td></tr>"
+            for i, v in enumerate(violations[:15])
+        )
+
+        cases_rows = ''.join(
+            f"<tr><td>{m}</td><td>{v}</td><td>{self._calc_change(cases.get('values', []), i)}</td></tr>"
+            for i, (m, v) in enumerate(zip(cases.get('months', []), cases.get('values', [])))
+        )
+
+        # 计算地区占比
+        total_region_count = sum(r.get('count', 0) for r in regions)
+        regions_rows = ''.join(
+            f"<tr><td>{r.get('region__name', r.get('name', ''))}</td>"
+            f"<td>{r.get('count', 0)}</td>"
+            f"<td>{self._calc_percentage(total_region_count, r.get('count', 0))}%</td></tr>"
+            for r in regions
+        )
+
+        news_items = ''.join(
+            f"<div class='news-item'><strong>{n.get('title', '')}</strong>"
+            f"<br><small>来源：{n.get('region_name', '')} | 日期：{n.get('date', '')}</small></div>"
+            for n in recent_news[:20]
+        )
+
         html = f"""
         <!DOCTYPE html>
         <html lang="zh-CN">
@@ -254,7 +442,12 @@ class PDFReportGenerator(ReportGenerator):
             <title>{self.title}</title>
             <style>
                 @page {{ size: A4; margin: 2cm }}
-                body {{ font-family: 'SimSun', '宋体', sans-serif; font-size: 12px; color: #333; line-height: 1.6 }}
+                body {{
+                    font-family: 'Microsoft YaHei', 'SimSun', '宋体', sans-serif;
+                    font-size: 12px;
+                    color: #333;
+                    line-height: 1.6
+                }}
                 h1 {{ color: #1a4a8c; text-align: center; font-size: 24px; margin-bottom: 10px }}
                 h2 {{ color: #2c5aa0; border-bottom: 2px solid #2c5aa0; padding-bottom: 8px; margin-top: 30px }}
                 h3 {{ color: #3d6cb8; margin-top: 20px }}
@@ -309,23 +502,23 @@ class PDFReportGenerator(ReportGenerator):
             <h2>二、违规事项分布</h2>
             <table>
                 <tr><th>排名</th><th>违规类型</th><th>数量</th></tr>
-                {''.join(f"<tr><td>{i+1}</td><td>{v.get('name', '')}</td><td>{v.get('value', 0)}</td></tr>" for i, v in enumerate(violations[:15]))}
+                {violations_rows}
             </table>
 
             <h2>三、案件查处趋势</h2>
             <table>
                 <tr><th>月份</th><th>案件数</th><th>环比变化</th></tr>
-                {''.join(f"<tr><td>{m}</td><td>{v}</td><td>{'-' if i == 0 else self._calc_change(values, i)}</td></tr>" for i, (m, v) in enumerate(zip(cases.get('months', []), cases.get('values', []))))}
+                {cases_rows}
             </table>
 
             <h2>四、地区分布统计</h2>
             <table>
                 <tr><th>地区</th><th>新闻数量</th><th>占比</th></tr>
-                {''.join(f"<tr><td>{r.get('region__name', r.get('name', ''))}</td><td>{r.get('count', 0)}</td><td>{self._calc_percentage(regions, r)}%</td></tr>" for r in regions)}
+                {regions_rows}
             </table>
 
             <h2>五、最新通报案例</h2>
-            {''.join(f"<div class='news-item'><strong>{n.get('title', '')}</strong><br><small>来源：{n.get('region_name', '')} | 日期：{n.get('date', '')}</small></div>" for n in recent_news[:20])}
+            {news_items}
         </body>
         </html>
         """
@@ -338,11 +531,10 @@ class PDFReportGenerator(ReportGenerator):
             return f'{change:+.1f}%'
         return '-'
 
-    def _calc_percentage(self, regions, region):
+    def _calc_percentage(self, total, count):
         """计算占比"""
-        total = sum(r.get('count', 0) for r in regions)
         if total > 0:
-            return f'{region.get("count", 0) / total * 100:.1f}'
+            return f'{count / total * 100:.1f}'
         return '0'
 
 
@@ -352,7 +544,7 @@ class ExcelReportGenerator(ReportGenerator):
     def generate(self, data=None, **kwargs):
         """生成Excel报告"""
         import openpyxl
-        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
         from openpyxl.utils import get_column_letter
 
         wb = openpyxl.Workbook()
@@ -360,11 +552,10 @@ class ExcelReportGenerator(ReportGenerator):
         # Sheet 1: 统计概览
         ws1 = wb.active
         ws1.title = '统计概览'
-
         self._setup_sheet(ws1)
         self._fill_summary(ws1, data.get('summary', {}))
 
-        # Sheet 2: 违规事项
+        # Sheet 2: 违规事项分布
         ws2 = wb.create_sheet('违规事项分布')
         self._setup_sheet(ws2)
         self._fill_list(ws2, data.get('violations', []), ['违规类型', '数量'])
@@ -372,21 +563,7 @@ class ExcelReportGenerator(ReportGenerator):
         # Sheet 3: 案件趋势
         ws3 = wb.create_sheet('案件趋势')
         self._setup_sheet(ws3)
-
-        cases = data.get('cases', {})
-        months = cases.get('months', [])
-        values = cases.get('values', [])
-
-        ws3['A1'] = '月份'
-        ws3['B1'] = '案件数'
-        ws3['C1'] = '环比变化'
-
-        for i, (month, value) in enumerate(zip(months, values), 2):
-            ws3[f'A{i}'] = month
-            ws3[f'B{i}'] = value
-            if i > 2 and values[i-3] > 0:
-                change = ((value - values[i-3]) / values[i-3] * 100)
-                ws3[f'C{i}'] = f'{change:+.1f}%'
+        self._fill_cases_trend(ws3, data.get('cases', {}))
 
         # Sheet 4: 地区统计
         ws4 = wb.create_sheet('地区统计')
@@ -395,14 +572,146 @@ class ExcelReportGenerator(ReportGenerator):
 
         # Sheet 5: 最新新闻
         ws5 = wb.create_sheet('最新新闻')
-        self._setup_sheet(ws5)
+        self._setup_sheet_with_extra_columns(ws5)  # 设置更多的列宽
         self._fill_news(ws5, data.get('recent_news', []))
+
+        # Sheet 6: 详细统计
+        ws6 = wb.create_sheet('详细统计')
+        self._setup_sheet(ws6)
+        self._fill_detailed_stats(ws6, data)
 
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
 
         return output
+
+    def _fill_cases_trend(self, ws, cases):
+        """填充案件趋势数据"""
+        ws['A1'] = '月份'
+        ws['B1'] = '案件数'
+        ws['C1'] = '环比变化'
+        ws['D1'] = '同比增长'
+
+        months = cases.get('months', [])
+        values = cases.get('values', [])
+
+        for i, (month, value) in enumerate(zip(months, values), 2):
+            ws[f'A{i}'] = month
+            ws[f'B{i}'] = value
+            
+            # 环比变化
+            if i > 2 and len(values) > i-3 and values[i-3] > 0:
+                change = ((value - values[i-3]) / values[i-3] * 100)
+                ws[f'C{i}'] = f'{change:+.1f}%'
+            else:
+                ws[f'C{i}'] = '-'
+            
+            # 同比变化（与去年同期比较）
+            # 简化处理：假设有足够数据
+            ws[f'D{i}'] = '-'  # 可根据实际数据计算
+
+    def _setup_sheet_with_extra_columns(self, ws):
+        """设置工作表样式（适用于更多列）"""
+        from openpyxl.styles import Border, Side  # 在函数内部导入，避免名称冲突
+        
+        header_font = Font(bold=True, color='FFFFFF')
+        header_fill = PatternFill(start_color='00D2FF', end_color='00D2FF', fill_type='solid')
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+
+        # 设置列宽
+        ws.column_dimensions['A'].width = 8   # 序号
+        ws.column_dimensions['B'].width = 50  # 标题
+        ws.column_dimensions['C'].width = 15  # 地区
+        ws.column_dimensions['D'].width = 12  # 日期
+        ws.column_dimensions['E'].width = 30  # 标签
+        ws.column_dimensions['F'].width = 20  # 来源
+
+    def _fill_detailed_stats(self, ws, data):
+        """填充详细统计数据"""
+        ws['A1'] = '统计项目'
+        ws['B1'] = '数值'
+        ws['C1'] = '说明'
+
+        row = 2
+        
+        # 添加更多统计信息
+        summary = data.get('summary', {})
+        ws[f'A{row}'] = '总新闻数'
+        ws[f'B{row}'] = summary.get('total_news', 0)
+        ws[f'C{row}'] = '系统中所有已发布新闻的总数'
+        row += 1
+
+        ws[f'A{row}'] = '今日新增'
+        ws[f'B{row}'] = summary.get('today_news', 0)
+        ws[f'C{row}'] = '今天新增的新闻数量'
+        row += 1
+
+        ws[f'A{row}'] = '昨日新增'
+        ws[f'B{row}'] = summary.get('yesterday_news', 0)
+        ws[f'C{row}'] = '昨天新增的新闻数量'
+        row += 1
+
+        ws[f'A{row}'] = '活跃地区数'
+        ws[f'B{row}'] = summary.get('active_regions', 0)
+        ws[f'C{row}'] = '有新闻发布的地区数量'
+        row += 1
+
+        ws[f'A{row}'] = '今日爬取'
+        ws[f'B{row}'] = summary.get('today_crawled', 0)
+        ws[f'C{row}'] = '今天爬取的新闻数量'
+        row += 1
+
+        ws[f'A{row}'] = '今日新发现'
+        ws[f'B{row}'] = summary.get('today_new', 0)
+        ws[f'C{row}'] = '今天新发现的新闻数量'
+        row += 1
+
+        # 添加违规类型统计
+        violations = data.get('violations', [])
+        if violations:
+            ws[f'A{row}'] = '主要违规类型'
+            ws[f'B{row}'] = len(violations)
+            top_violations = [v.get('name', '') for v in violations[:3]]
+            ws[f'C{row}'] = '、'.join(top_violations) if top_violations else '无'
+            row += 1
+
+        # 添加地区统计
+        regions = data.get('regions', [])
+        if regions:
+            ws[f'A{row}'] = '主要活跃地区'
+            ws[f'B{row}'] = len(regions)
+            top_regions = [r.get('region__name', r.get('name', '')) for r in regions[:3]]
+            ws[f'C{row}'] = '、'.join(top_regions) if top_regions else '无'
+            row += 1
+
+        # 添加数据时间范围
+        news_list = data.get('recent_news', [])
+        if news_list:
+            dates = [n.get('date') for n in news_list if n.get('date')]
+            if dates:
+                from datetime import datetime
+                dates = [d for d in dates if d]
+                if dates:
+                    # 假设日期格式为字符串，尝试解析
+                    try:
+                        date_objects = [datetime.fromisoformat(str(d).replace('Z', '+00:00')) if 'T' in str(d) else datetime.strptime(str(d), '%Y-%m-%d') for d in dates]
+                        ws[f'A{row}'] = '数据时间范围'
+                        ws[f'B{row}'] = f'{min(date_objects).strftime("%Y-%m-%d")} 至 {max(date_objects).strftime("%Y-%m-%d")}'
+                        ws[f'C{row}'] = '当前报告覆盖的时间段'
+                    except:
+                        pass
 
     def _setup_sheet(self, ws):
         """设置工作表样式"""

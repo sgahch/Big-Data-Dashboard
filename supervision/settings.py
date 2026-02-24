@@ -4,6 +4,10 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# 加载 .env 文件
+from dotenv import load_dotenv
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-supervision-project-key')
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
@@ -98,6 +102,9 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# 允许无斜杠的 URL
+APPEND_SLASH = False
 
 LOGGING = {
     'version': 1,

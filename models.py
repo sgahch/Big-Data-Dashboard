@@ -273,7 +273,7 @@ def get_violation_stats() -> List[Dict]:
 
 
 def get_case_stats(months: int = 12) -> Dict:
-    """获取案件查处统计（按月）"""
+    """获取案件查处统计（按月 + 标签）"""
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -289,18 +289,40 @@ def get_case_stats(months: int = 12) -> Dict:
     ''')
 
     rows = cursor.fetchall()
-    conn.close()
 
     months_list = []
     values_list = []
 
     for row in rows:
-        months_list.append(row['month'].replace('2025-', '') + '月')
+        months_list.append(row['month'].replace('2025-', '').replace('2026-', '') + '月')
         values_list.append(row['count'])
+
+    # 获取标签统计
+    cursor.execute('''
+        SELECT tags, COUNT(*) as count FROM news
+        WHERE tags != '' AND tags IS NOT NULL
+        GROUP BY tags
+    ''')
+
+    tag_rows = cursor.fetchall()
+    conn.close()
+
+    # 统计每个标签的数量
+    tag_stats = {}
+    for row in tag_rows:
+        tags = (row['tags'] or '').split(',')
+        for tag in tags:
+            tag = tag.strip()
+            if tag:
+                tag_stats[tag] = tag_stats.get(tag, 0) + row['count']
+
+    # 按数量排序
+    tag_list = [{'name': k, 'value': v} for k, v in sorted(tag_stats.items(), key=lambda x: x[1], reverse=True)]
 
     return {
         'months': list(reversed(months_list)),
-        'values': list(reversed(values_list))
+        'values': list(reversed(values_list)),
+        'tag_stats': tag_list
     }
 
 

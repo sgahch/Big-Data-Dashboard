@@ -18,7 +18,7 @@ const BOT_CONFIGS = {
      */
     'wechat_chat': {
         bot_id: '7584642107525824539',
-        api_key: 'pat_XAXCUN8690km9Kp0sXJbiYzxZkNOB3Bm4taHyDc29FcMkXHLg1akdTwXZIUTnTxz',
+        api_key: 'pat_3Zzgz9YMw6iuT5HlPK3SOsWkgLf4ANq0d68XmBrSQ3SeDd3dmsKU2yhqDwRBj7fz',
         name: '微信聊天机器人',
         description: '和微信朋友轻松聊天',
         welcome_message: '嗨！我来陪你聊天啦，以后咱们可以畅聊各种话题😃。',

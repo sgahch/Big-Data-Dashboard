@@ -214,8 +214,54 @@ def get_violations_stats():
 def get_cases_stats():
     """获取案件查处统计"""
     try:
+        date_str = request.args.get('date')  # 单日筛选
+        start_date = request.args.get('start_date')  # 开始日期
+        end_date = request.args.get('end_date')  # 结束日期
         months = int(request.args.get('months', 12))
+
+        # 日期范围筛选
+        if date_str or (start_date and end_date):
+            if date_str:
+                news_list = get_news_by_date(date_str, date_str)
+            else:
+                news_list = get_news_by_date(start_date, end_date)
+
+            # 按标签统计
+            tag_stats = {}
+            for n in news_list:
+                tags = (n['tags'] or '').split(',')
+                for tag in tags:
+                    tag = tag.strip()
+                    if tag:
+                        tag_stats[tag] = tag_stats.get(tag, 0) + 1
+
+            tag_chart = [{'name': k, 'value': v} for k, v in sorted(tag_stats.items(), key=lambda x: x[1], reverse=True)]
+
+            result = {
+                'type': 'list',
+                'date': date_str,
+                'start_date': start_date or date_str,
+                'end_date': end_date or date_str,
+                'total': len(news_list),
+                'news': [{
+                    'id': n['id'],
+                    'title': n['title'],
+                    'date': n['date'],
+                    'region_name': n['region'],
+                    'source': n['source'],
+                    'tags': (n['tags'] or '').split(',') if n['tags'] else []
+                } for n in news_list],
+                'tag_stats': tag_chart
+            }
+            return jsonify({
+                'code': 0, 'message': 'success',
+                'data': result,
+                'timestamp': datetime.now().isoformat()
+            })
+
+        # 月度统计（默认）
         stats = get_case_stats(months)
+        stats['type'] = 'chart'
         return jsonify({
             'code': 0, 'message': 'success',
             'data': stats,
@@ -293,7 +339,7 @@ def get_regions():
 # ========== Coze AI客服代理API ==========
 
 # Coze API 配置
-COZE_API_TOKEN = os.environ.get('COZE_API_TOKEN', 'cztei_qB2AFxhYWesY9WyV1VktPi6FRFNm5247CIm4yCrYz8203EeZ4vTVIqpmZo7R0789M')
+COZE_API_TOKEN = os.environ.get('COZE_API_TOKEN', 'cztei_qcL0IvA41MVJ1CvchE2DBZxXstHGtQgluMzVTQeSmOVFkhQr7PSywIppHdRh23J1U')
 COZE_BOT_ID = os.environ.get('COZE_BOT_ID', '7584448825868189732')
 
 # 使用官方 SDK cozepy

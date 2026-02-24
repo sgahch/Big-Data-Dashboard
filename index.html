@@ -549,6 +549,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            margin-top: 45px;
         }
 
         .chat-history::-webkit-scrollbar {
@@ -587,13 +588,13 @@
         }
 
         .chat-avatar {
-            width: 35px;
-            height: 35px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 14px;
             flex-shrink: 0;
         }
 
@@ -609,10 +610,10 @@
 
         .chat-bubble {
             max-width: 70%;
-            padding: 12px 16px;
+            padding: 10px 14px;
             border-radius: 12px;
-            line-height: 1.6;
-            font-size: 14px;
+            line-height: 1.5;
+            font-size: 12px;
             word-wrap: break-word;
         }
 
@@ -706,12 +707,12 @@
 
         .chat-input {
             flex: 1;
-            padding: 10px 15px;
+            padding: 8px 15px;
             background: rgba(11, 15, 42, 0.8);
             border: 1px solid rgba(0, 210, 255, 0.3);
             border-radius: 20px;
             color: #00D2FF;
-            font-size: 14px;
+            font-size: 12px;
             outline: none;
             transition: all 0.3s ease;
         }
@@ -726,11 +727,12 @@
         }
 
         .chat-send-btn {
-            padding: 10px 25px;
+            padding: 8px 18px;
             background: linear-gradient(135deg, #00D2FF 0%, #0080FF 100%);
             border: none;
             border-radius: 20px;
             color: #fff;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -760,6 +762,97 @@
             40% { content: '.'; }
             60% { content: '..'; }
             80%, 100% { content: '...'; }
+        }
+
+        /* ========== AI对话头部和历史记录样式 ========== */
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+        }
+
+        .chat-title {
+            font-size: 12px;
+            color: #00D2FF;
+            font-weight: bold;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-action-btn {
+            padding: 4px 10px;
+            background: rgba(0, 210, 255, 0.15);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 12px;
+            color: #00D2FF;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chat-action-btn:hover {
+            background: rgba(0, 210, 255, 0.3);
+        }
+
+        .chat-history-sidebar {
+            display: none;
+            position: absolute;
+            left: 0;
+            top: 45px;
+            bottom: 60px;
+            width: 200px;
+            background: rgba(11, 15, 42, 0.98);
+            border-right: 1px solid rgba(0, 210, 255, 0.3);
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .chat-history-sidebar.show {
+            display: block;
+        }
+
+        .chat-history-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+            color: #a0d8ef;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-history-item:hover {
+            background: rgba(0, 210, 255, 0.15);
+        }
+
+        .chat-history-item.active {
+            background: rgba(0, 210, 255, 0.2);
+            border-left: 2px solid #00D2FF;
+        }
+
+        .chat-history-item .delete-btn {
+            float: right;
+            color: rgba(255, 107, 107, 0.6);
+            font-size: 10px;
+        }
+
+        .chat-history-item .delete-btn:hover {
+            color: #ff6b6b;
+        }
+
+        .empty-history {
+            padding: 20px 12px;
+            text-align: center;
+            color: rgba(160, 216, 239, 0.5);
+            font-size: 11px;
         }
 
         /* ========== 侧边栏导航样式 ========== */
@@ -1447,7 +1540,7 @@
         <!-- 右下角：AI智能助手 -->
         <div class="panel" id="panel-ai">
             <h2 class="panel-title"><i class="fas fa-robot"></i> 纪检AI智能助手</h2>
-            <div id="ai-container" class="chart-container"></div>
+            <div id="ai-container" class="chart-container" style="position: relative;"></div>
         </div>
     </div>
 
@@ -2592,11 +2685,26 @@
 
         // ========== 右下角：AI对话功能 ==========
         let conversationId = 'session_' + Date.now();
+        let conversations = JSON.parse(localStorage.getItem('ai_conversations') || '[]');
 
         function initAIChat() {
             const container = document.getElementById('ai-container');
 
             container.innerHTML = `
+                <div class="chat-header">
+                    <span class="chat-title">对话列表</span>
+                    <div class="chat-actions">
+                        <button class="chat-action-btn" onclick="toggleHistory()">
+                            <i class="fas fa-history"></i> 历史
+                        </button>
+                        <button class="chat-action-btn" onclick="newChat()">
+                            <i class="fas fa-plus"></i> 新建
+                        </button>
+                    </div>
+                </div>
+                <div class="chat-history-sidebar" id="chat-history-sidebar">
+                    <div id="chat-history-list"></div>
+                </div>
                 <div class="chat-history" id="chat-history">
                     <div class="chat-message ai">
                         <div class="chat-avatar">🤖</div>
@@ -2617,6 +2725,131 @@
                     sendMessage();
                 }
             });
+
+            // 渲染历史记录
+            renderConversationList();
+        }
+
+        // 切换历史记录侧边栏显示
+        function toggleHistory() {
+            const sidebar = document.getElementById('chat-history-sidebar');
+            sidebar.classList.toggle('show');
+        }
+
+        // 新建对话
+        function newChat() {
+            conversationId = 'session_' + Date.now();
+            const history = document.getElementById('chat-history');
+            history.innerHTML = `
+                <div class="chat-message ai">
+                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-bubble">您好！我是纪检监察智能助手，可以为您解答纪检监察相关问题。请问有什么可以帮助您的？</div>
+                </div>
+            `;
+            // 关闭历史侧边栏
+            document.getElementById('chat-history-sidebar').classList.remove('show');
+        }
+
+        // 渲染对话列表
+        function renderConversationList() {
+            const list = document.getElementById('chat-history-list');
+            if (conversations.length === 0) {
+                list.innerHTML = '<div class="empty-history">暂无历史对话</div>';
+                return;
+            }
+
+            list.innerHTML = conversations.map(conv => `
+                <div class="chat-history-item ${conv.id === conversationId ? 'active' : ''}"
+                     onclick="loadConversation('${conv.id}')">
+                    <span onclick="event.stopPropagation();">${conv.title}</span>
+                    <span class="delete-btn" onclick="event.stopPropagation(); deleteConversation('${conv.id}')">
+                        <i class="fas fa-times"></i>
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // 加载指定对话
+        function loadConversation(id) {
+            const conv = conversations.find(c => c.id === id);
+            if (!conv) return;
+
+            conversationId = id;
+            const history = document.getElementById('chat-history');
+
+            if (conv.messages && conv.messages.length > 0) {
+                history.innerHTML = conv.messages.map(msg => `
+                    <div class="chat-message ${msg.type}">
+                        <div class="chat-avatar">${msg.type === 'ai' ? '🤖' : '👤'}</div>
+                        <div class="chat-bubble">${msg.content}</div>
+                    </div>
+                `).join('');
+            } else {
+                history.innerHTML = `
+                    <div class="chat-message ai">
+                        <div class="chat-avatar">🤖</div>
+                        <div class="chat-bubble">您好！我是纪检监察智能助手，可以为您解答纪检监察相关问题。请问有什么可以帮助您的？</div>
+                    </div>
+                `;
+            }
+
+            // 关闭历史侧边栏
+            document.getElementById('chat-history-sidebar').classList.remove('show');
+            renderConversationList();
+        }
+
+        // 删除对话
+        function deleteConversation(id) {
+            conversations = conversations.filter(c => c.id !== id);
+            localStorage.setItem('ai_conversations', JSON.stringify(conversations));
+
+            // 如果删除的是当前对话，则新建一个
+            if (id === conversationId) {
+                newChat();
+            }
+
+            renderConversationList();
+        }
+
+        // 保存当前对话
+        function saveCurrentConversation() {
+            const history = document.getElementById('chat-history');
+            const messages = [];
+            history.querySelectorAll('.chat-message').forEach(msg => {
+                const type = msg.classList.contains('user') ? 'user' : 'ai';
+                const content = msg.querySelector('.chat-bubble').innerHTML;
+                // 跳过欢迎语
+                if (!msg.querySelector('.chat-bubble').textContent.includes('您好！我是纪检监察智能助手')) {
+                    messages.push({ type, content });
+                }
+            });
+
+            if (messages.length === 0) return;
+
+            // 获取对话标题（第一条用户消息的前20个字符）
+            const firstUserMsg = messages.find(m => m.type === 'user');
+            const title = firstUserMsg
+                ? firstUserMsg.content.replace(/<[^>]*>/g, '').substring(0, 20) + '...'
+                : '新对话';
+
+            // 更新或添加对话
+            const existingIdx = conversations.findIndex(c => c.id === conversationId);
+            if (existingIdx >= 0) {
+                conversations[existingIdx].title = title;
+                conversations[existingIdx].messages = messages;
+            } else {
+                conversations.unshift({
+                    id: conversationId,
+                    title: title,
+                    messages: messages,
+                    createdAt: new Date().toISOString()
+                });
+            }
+
+            // 只保留最近20个对话
+            conversations = conversations.slice(0, 20);
+            localStorage.setItem('ai_conversations', JSON.stringify(conversations));
+            renderConversationList();
         }
 
         async function sendMessage() {
@@ -2658,6 +2891,8 @@
                     // 格式化回复内容
                     const formattedReply = formatReply(result.data.reply);
                     addMessage('ai', formattedReply);
+                    // 保存对话
+                    saveCurrentConversation();
                 } else {
                     addMessage('ai', '抱歉，我现在有点忙，请稍后再试。');
                 }
