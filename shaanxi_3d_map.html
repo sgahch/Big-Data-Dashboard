@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>陕西省数字孪生 - 红色高度修正终极版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'PingFang SC', sans-serif;
+        }
+
+        #main-canvas {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, rgba(200, 0, 0, 0.4), transparent);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .header h1 {
+            color: #ff4d4d;
+            font-size: 24px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #ff0000;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>陕西省全域数据链路监测 (高度修正版)</h1>
+    </div>
+    <div id="main-canvas"></div>
+
+    <script>
+        const chart = echarts.init(document.getElementById('main-canvas'));
+
+        const coords = {
+            '西安': [108.9398, 34.3416], '宝鸡': [107.2371, 34.3619],
+            '咸阳': [108.7091, 34.3296], '渭南': [109.5102, 34.4994],
+            '铜川': [108.9457, 34.8972], '延安': [109.4897, 36.5853],
+            '榆林': [109.7412, 38.2909], '汉中': [107.0230, 33.0678],
+            '安康': [109.0291, 32.6853], '商洛': [109.9404, 33.8703]
+        };
+
+        // --- 核心配置区 ---
+        const BASE_H = 1.5; // 关中、陕南基础厚度
+        const HIGH_H = 4.0; // 延安、榆林拉伸厚度
+        const HIGH_CITIES = ['延安', '榆林'];
+
+        // 这里的 Z 值获取需要非常小心，有些版本 GL 的 Z 轴是从 region 底部起算的
+        function getCityZ(cityName) {
+            const isHigh = HIGH_CITIES.some(name => cityName.includes(name));
+            // 修正逻辑：如果依然悬空，试着将 0.1 调小甚至改为 0
+            return isHigh ? HIGH_H : BASE_H;
+        }
+
+        const mapUrl = 'https://geo.datav.aliyun.com/areas_v3/bound/610000_full.json';
+
+        async function init() {
+            const res = await fetch(mapUrl);
+            const geoJson = await res.json();
+            echarts.registerMap('sx_red_final', geoJson);
+
+            const cityNames = Object.keys(coords);
+            const allLines = [];
+            for (let i = 0; i < 40; i++) {
+                const s = cityNames[Math.floor(Math.random() * 10)];
+                const e = cityNames[Math.floor(Math.random() * 10)];
+                if (s === e) continue;
+
+                allLines.push({
+                    coords: [
+                        [coords[s][0], coords[s][1], getCityZ(s)],
+                        [coords[e][0], coords[e][1], getCityZ(e)]
+                    ]
+                });
+            }
+
+            const option = {
+                backgroundColor: '#050000',
+                geo3D: {
+                    map: 'sx_red_final',
+                    shading: 'realistic',
+                    boxHeight: 10, // 限制容器总高度，防止 Z 轴拉伸比例失真
+                    regionHeight: BASE_H,
+
+                    regions: geoJson.features.map(f => {
+                        const name = f.properties.name;
+                        const isHigh = HIGH_CITIES.some(k => name.includes(k));
+                        return {
+                            name: name,
+                            height: isHigh ? HIGH_H : BASE_H,
+                            itemStyle: { color: isHigh ? '#4a0000' : '#2a0000' }
+                        };
+                    }),
+
+                    itemStyle: { borderColor: '#ff3333', borderWidth: 1 },
+                    postEffect: { enable: true, bloom: { enable: true, bloomIntensity: 0.2 } },
+                    viewControl: {
+                        alpha: 40,
+                        beta: 15,
+                        distance: 100,
+                        autoRotate: true
+                    },
+                    light: {
+                        main: { intensity: 2, shadow: true, alpha: 55 },
+                        ambient: { intensity: 0.3 }
+                    }
+                },
+                series: [
+                    {
+                        type: 'lines3D',
+                        coordinateSystem: 'geo3D',
+                        effect: { show: true, period: 3, trailLength: 0.3, trailColor: '#ffdd00', trailWidth: 3 },
+                        lineStyle: { color: '#ff0000', width: 1.5, opacity: 0.2, curviness: 0.3 },
+                        data: allLines
+                    },
+                    {
+                        type: 'scatter3D',
+                        coordinateSystem: 'geo3D',
+                        symbolSize: 8,
+                        itemStyle: { color: '#ffdd00', opacity: 1 },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            formatter: '{b}',
+                            // 关键：为了不让标签飘太远，distance 设为 0
+                            distance: 0,
+                            textStyle: {
+                                color: '#fff', fontSize: 12, fontWeight: 'bold',
+                                textBorderColor: '#ff0000', textBorderWidth: 2,
+                                backgroundColor: 'transparent'
+                            }
+                        },
+                        data: Object.entries(coords).map(([name, pos]) => ({
+                            name,
+                            value: [pos[0], pos[1], getCityZ(name)]
+                        }))
+                    }
+                ]
+            };
+
+            chart.setOption(option);
+        }
+
+        init();
+        window.onresize = () => chart.resize();
+    </script>
+</body>
+
+</html>

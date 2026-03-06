@@ -13,7 +13,16 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash(ping:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(py -m pip install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(venvScriptspip install reportlab)",
+      "Bash(\"venv/Scripts/pip\" install --upgrade xhtml2pdf reportlab)",
+      "Bash(venvScriptspython:*)",
+      "Bash(venv/Scripts/python manage.py shell:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
