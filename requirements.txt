@@ -16,7 +16,7 @@ django-filter>=23.0
 django-import-export>=3.3.0
 
 # Database
-mysqlclient>=2.2.0
+# 已移除 mysqlclient 以兼容 Serverless 环境
 PyMySQL>=1.1.0
 
 # Scheduler
@@ -34,6 +34,10 @@ Pillow>=10.0.0
 # Report Generation
 python-docx>=1.1.0
 weasyprint>=60.0
+python-bidi==0.4.2
 xhtml2pdf>=0.2.11
 reportlab>=4.0.0
 openpyxl>=3.1.0
+
+# WSGI Server (Render 部署必填)
+gunicorn>=21.2.0
