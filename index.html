@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>纪检监察大数据可视化平台</title>
-    
+
     <!-- ECharts CDN -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 
@@ -13,14 +14,14 @@
 
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Microsoft YaHei', sans-serif;
             background:
@@ -29,8 +30,7 @@
                 repeating-linear-gradient(90deg, rgba(0, 210, 255, 0.015) 0px, transparent 1px, transparent 40px, rgba(0, 210, 255, 0.015) 41px),
                 /* 半透明遮罩层(降低透明度让背景图更清晰) */
                 linear-gradient(135deg, rgba(11, 15, 42, 0.3) 0%, rgba(26, 31, 58, 0.4) 100%),
-                /* 👇👇👇 在下面这行的引号内粘贴您的背景图URL 👇👇👇 */
-                url('https://www.xawl.edu.cn/guanzhong9.jpg');
+                url('./index.jpg');
             background-attachment: fixed;
             background-size: 40px 40px, 40px 40px, 100% 100%, cover;
             background-position: 0 0, 0 0, 0 0, center center;
@@ -81,13 +81,25 @@
         }
 
         @keyframes bgPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
         }
 
         @keyframes particleFloat {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 100% 100%; }
+            0% {
+                background-position: 0% 0%;
+            }
+
+            100% {
+                background-position: 100% 100%;
+            }
         }
 
         /* ========== Header顶部栏样式 ========== */
@@ -110,16 +122,7 @@
             padding: 0 40px;
         }
 
-        /* Header四角装饰 */
-        .header::before,
-        .header::after {
-            content: '';
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border: 3px solid #00D2FF;
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
-        }
+
 
         .header::before {
             top: 10px;
@@ -180,8 +183,15 @@
         }
 
         @keyframes gradientShift {
-            0%, 100% { background-position: 0% center; }
-            50% { background-position: 100% center; }
+
+            0%,
+            100% {
+                background-position: 0% center;
+            }
+
+            50% {
+                background-position: 100% center;
+            }
         }
 
         /* SVG装饰容器 */
@@ -202,21 +212,45 @@
 
         /* SVG扫描线动画 */
         @keyframes scanLine {
-            0% { transform: translateX(-100%); opacity: 0; }
-            50% { opacity: 1; }
-            100% { transform: translateX(100%); opacity: 0; }
+            0% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateX(100%);
+                opacity: 0;
+            }
         }
 
         /* SVG光点动画 */
         @keyframes glowPulse {
-            0%, 100% { opacity: 0.3; r: 2; }
-            50% { opacity: 1; r: 3; }
+
+            0%,
+            100% {
+                opacity: 0.3;
+                r: 2;
+            }
+
+            50% {
+                opacity: 1;
+                r: 3;
+            }
         }
 
         /* SVG线条绘制动画 */
         @keyframes drawLine {
-            0% { stroke-dashoffset: 200; }
-            100% { stroke-dashoffset: 0; }
+            0% {
+                stroke-dashoffset: 200;
+            }
+
+            100% {
+                stroke-dashoffset: 0;
+            }
         }
 
         /* 右侧装饰区域 */
@@ -241,6 +275,55 @@
 
         .header-time i {
             animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* 用户信息区域 */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 8px 15px;
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 20px;
+            box-shadow: inset 0 0 10px rgba(0, 210, 255, 0.2);
+        }
+
+        .user-info .user-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #00D2FF;
+            font-size: 14px;
+        }
+
+        .user-info .user-name i {
+            font-size: 16px;
+        }
+
+        .logout-button {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.2) 0%, rgba(255, 100, 100, 0.2) 100%);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 15px;
+            color: #FF6B6B;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .logout-button:hover {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.3) 0%, rgba(255, 100, 100, 0.3) 100%);
+            border-color: rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .logout-button:active {
+            transform: translateY(0);
         }
 
         /* 地区选择器样式 */
@@ -281,8 +364,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         /* ========== 调整容器以适应Header ========== */
@@ -290,15 +380,17 @@
             position: relative;
             z-index: 1;
             width: 100vw;
-            height: calc(100vh - 80px); /* 减去Header高度 */
-            margin-top: 80px; /* Header高度 */
+            height: calc(100vh - 80px);
+            /* 减去Header高度 */
+            margin-top: 80px;
+            /* Header高度 */
             padding: 20px;
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
             gap: 20px;
         }
-        
+
         /* 通用面板样式 - 增强毛玻璃效果 */
         .panel {
             background: linear-gradient(135deg, rgba(11, 15, 42, 0.75) 0%, rgba(26, 31, 58, 0.7) 100%);
@@ -327,9 +419,9 @@
             border-radius: 12px;
             padding: 1px;
             background: linear-gradient(135deg,
-                rgba(0, 210, 255, 0.5) 0%,
-                rgba(153, 51, 255, 0.5) 50%,
-                rgba(0, 210, 255, 0.5) 100%);
+                    rgba(0, 210, 255, 0.5) 0%,
+                    rgba(153, 51, 255, 0.5) 50%,
+                    rgba(0, 210, 255, 0.5) 100%);
             -webkit-mask:
                 linear-gradient(#fff 0 0) content-box,
                 linear-gradient(#fff 0 0);
@@ -340,8 +432,15 @@
         }
 
         @keyframes borderGlow {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
         }
 
         /* 面板悬停效果 */
@@ -362,9 +461,9 @@
             right: 0;
             height: 1px;
             background: linear-gradient(90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.4) 50%,
-                transparent 100%);
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.4) 50%,
+                    transparent 100%);
             pointer-events: none;
         }
 
@@ -381,17 +480,17 @@
             box-shadow: 2px -2px 10px rgba(0, 210, 255, 0.5);
             opacity: 0.8;
         }
-        
+
         .panel-title {
             font-size: 20px;
             font-weight: bold;
             margin-bottom: 15px;
             padding-left: 30px;
-            color: #00D2FF;
+            color: #ffffff;
             text-shadow: 0 0 10px rgba(0, 210, 255, 0.8);
             position: relative;
         }
-        
+
         .panel-title::before {
             content: '';
             position: absolute;
@@ -403,7 +502,7 @@
             background: linear-gradient(180deg, #00D2FF 0%, #9933FF 100%);
             box-shadow: 0 0 10px #00D2FF;
         }
-        
+
         /* 图表容器 */
         .chart-container {
             width: 100%;
@@ -419,7 +518,7 @@
         }
 
         /* 模拟表头 - 强制固定布局 */
-        #news-container > div:first-child {
+        #news-container>div:first-child {
             position: absolute;
             top: 0;
             left: 0;
@@ -429,11 +528,12 @@
             background: linear-gradient(180deg, rgba(11, 21, 45, 0.98) 0%, rgba(11, 21, 45, 0.85) 100%);
             display: table;
             table-layout: fixed;
-            width: calc(100% - 0px); /* 考虑滚动条 */
+            width: calc(100% - 0px);
+            /* 考虑滚动条 */
             box-sizing: border-box;
         }
 
-        #news-container > div:first-child > div {
+        #news-container>div:first-child>div {
             display: table-cell;
             padding: 6px 8px;
             color: #00D2FF;
@@ -479,10 +579,21 @@
         }
 
         /* 统一列宽设置 */
-        .col-num { width: 10%; }
-        .col-title { width: 45%; }
-        .col-date { width: 15%; }
-        .col-source { width: 30%; }
+        .col-num {
+            width: 10%;
+        }
+
+        .col-title {
+            width: 45%;
+        }
+
+        .col-date {
+            width: 15%;
+        }
+
+        .col-source {
+            width: 30%;
+        }
 
         .news-table td {
             padding: 4px 8px;
@@ -520,6 +631,7 @@
             0% {
                 transform: translateY(0);
             }
+
             100% {
                 transform: translateY(-50%);
             }
@@ -577,6 +689,7 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -634,7 +747,8 @@
             margin: 5px 0;
         }
 
-        .chat-bubble ul, .chat-bubble ol {
+        .chat-bubble ul,
+        .chat-bubble ol {
             margin: 5px 0;
             padding-left: 20px;
         }
@@ -690,8 +804,12 @@
             text-decoration: underline;
         }
 
-        .chat-bubble h1, .chat-bubble h2, .chat-bubble h3,
-        .chat-bubble h4, .chat-bubble h5, .chat-bubble h6 {
+        .chat-bubble h1,
+        .chat-bubble h2,
+        .chat-bubble h3,
+        .chat-bubble h4,
+        .chat-bubble h5,
+        .chat-bubble h6 {
             color: #00D2FF;
             margin: 10px 0 5px;
             font-weight: bold;
@@ -758,10 +876,24 @@
         }
 
         @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
+
+            0%,
+            20% {
+                content: '';
+            }
+
+            40% {
+                content: '.';
+            }
+
+            60% {
+                content: '..';
+            }
+
+            80%,
+            100% {
+                content: '...';
+            }
         }
 
         /* ========== AI对话头部和历史记录样式 ========== */
@@ -1367,118 +1499,33 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Header顶部栏 -->
     <div class="header">
         <div class="header-logo">
-            <img src="https://www.xawl.edu.cn/image/logo.png" alt="西安文理学院">
+            <img src="https://dis.xawl.edu.cn/images/logo1.png" alt="西安文理学院">
         </div>
 
         <div class="header-title">
-            <!-- 左侧SVG装饰 -->
-            <svg class="svg-left" width="70" height="60" viewBox="0 0 70 60" xmlns="http://www.w3.org/2000/svg">
-                <!-- 主线条 -->
-                <path d="M 5 30 L 25 30 L 30 25 L 30 15"
-                      stroke="url(#gradient1)"
-                      stroke-width="2"
-                      fill="none"
-                      stroke-dasharray="200"
-                      stroke-dashoffset="200"
-                      style="animation: drawLine 2s ease-out forwards;">
-                </path>
-                <path d="M 5 30 L 25 30 L 30 35 L 30 45"
-                      stroke="url(#gradient1)"
-                      stroke-width="2"
-                      fill="none"
-                      stroke-dasharray="200"
-                      stroke-dashoffset="200"
-                      style="animation: drawLine 2s ease-out 0.3s forwards;">
-                </path>
-                <!-- 装饰圆点 -->
-                <circle cx="30" cy="15" r="2" fill="#00D2FF" opacity="0.3">
-                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
-                    <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite"/>
-                </circle>
-                <circle cx="30" cy="45" r="2" fill="#9933FF" opacity="0.3">
-                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" begin="0.5s" repeatCount="indefinite"/>
-                    <animate attributeName="r" values="2;3;2" dur="2s" begin="0.5s" repeatCount="indefinite"/>
-                </circle>
-                <circle cx="25" cy="30" r="1.5" fill="#00D2FF">
-                    <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
-                </circle>
-                <!-- 扫描线 -->
-                <rect x="0" y="28" width="3" height="4" fill="url(#scanGradient)" opacity="0">
-                    <animate attributeName="x" values="-5;70" dur="3s" repeatCount="indefinite"/>
-                    <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite"/>
-                </rect>
-                <!-- 渐变定义 -->
-                <defs>
-                    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:#00D2FF;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#9933FF;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="scanGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:#00D2FF;stop-opacity:0" />
-                        <stop offset="50%" style="stop-color:#00D2FF;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#00D2FF;stop-opacity:0" />
-                    </linearGradient>
-                </defs>
-            </svg>
 
             纪检监察大数据可视化平台
 
-            <!-- 右侧SVG装饰 -->
-            <svg class="svg-right" width="70" height="60" viewBox="0 0 70 60" xmlns="http://www.w3.org/2000/svg">
-                <!-- 主线条（镜像） -->
-                <path d="M 65 30 L 45 30 L 40 25 L 40 15"
-                      stroke="url(#gradient2)"
-                      stroke-width="2"
-                      fill="none"
-                      stroke-dasharray="200"
-                      stroke-dashoffset="200"
-                      style="animation: drawLine 2s ease-out forwards;">
-                </path>
-                <path d="M 65 30 L 45 30 L 40 35 L 40 45"
-                      stroke="url(#gradient2)"
-                      stroke-width="2"
-                      fill="none"
-                      stroke-dasharray="200"
-                      stroke-dashoffset="200"
-                      style="animation: drawLine 2s ease-out 0.3s forwards;">
-                </path>
-                <!-- 装饰圆点 -->
-                <circle cx="40" cy="15" r="2" fill="#9933FF" opacity="0.3">
-                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
-                    <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite"/>
-                </circle>
-                <circle cx="40" cy="45" r="2" fill="#00D2FF" opacity="0.3">
-                    <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" begin="0.5s" repeatCount="indefinite"/>
-                    <animate attributeName="r" values="2;3;2" dur="2s" begin="0.5s" repeatCount="indefinite"/>
-                </circle>
-                <circle cx="45" cy="30" r="1.5" fill="#9933FF">
-                    <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite"/>
-                </circle>
-                <!-- 扫描线 -->
-                <rect x="0" y="28" width="3" height="4" fill="url(#scanGradient2)" opacity="0">
-                    <animate attributeName="x" values="70;-5" dur="3s" repeatCount="indefinite"/>
-                    <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite"/>
-                </rect>
-                <!-- 渐变定义 -->
-                <defs>
-                    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:#9933FF;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#00D2FF;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="scanGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:#9933FF;stop-opacity:0" />
-                        <stop offset="50%" style="stop-color:#9933FF;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#9933FF;stop-opacity:0" />
-                    </linearGradient>
-                </defs>
-            </svg>
         </div>
 
         <div class="header-info">
+            <!-- 用户信息区域 -->
+            <div class="user-info" id="userInfo" style="display: none;">
+                <div class="user-name">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="userName">加载中...</span>
+                </div>
+                <button class="logout-button" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>登出</span>
+                </button>
+            </div>
+
             <!-- 地区选择器 -->
             <div class="region-selector">
                 <i class="fas fa-map-marker-alt"></i>
@@ -1497,6 +1544,12 @@
                     <option value="yangling">杨凌示范区</option>
                 </select>
             </div>
+            <!-- 3D 地图按钮 -->
+            <div style="margin-left: 20px;">
+                <button class="map-3d-btn" onclick="window.location.href='shaanxi_3d_map_optimized.html'">
+                    <i class="fas fa-globe"></i> 3D 地图
+                </button>
+            </div>
             <!-- 报告导出按钮 -->
             <div style="margin-left: 20px;">
                 <button class="report-btn" onclick="document.getElementById('report-modal').style.display='flex'">
@@ -1511,36 +1564,40 @@
     </div>
 
     <div class="container">
-        <!-- 左上角：违规事项分布 -->
-        <div class="panel" id="panel-violations">
-            <h2 class="panel-title"><i class="fas fa-chart-pie"></i> 违规事项分布</h2>
-            <div id="chart-violations" class="chart-container"></div>
+        <!-- 右下角：AI智能助手 -->
+        <div class="panel" id="panel-ai">
+            <h2 class="panel-title"><i class="fas fa-robot"></i> 纪检AI智能信息采集助手</h2>
+            <div id="ai-container" class="chart-container" style="position: relative;"></div>
         </div>
-        
+
         <!-- 右上角：实时情报滚动名单 -->
         <div class="panel" id="panel-news">
-            <h2 class="panel-title"><i class="fas fa-list-alt"></i> 实时情报滚动名单</h2>
+            <h2 class="panel-title"><i class="fas fa-list-alt"></i> 实时情报滚动名单（数据抓取）</h2>
             <div id="news-container" class="chart-container"></div>
         </div>
-        
+
         <!-- 左下角：案件查处统计 -->
         <div class="panel" id="panel-cases">
-            <h2 class="panel-title"><i class="fas fa-chart-bar"></i> 案件查处统计</h2>
+            <h2 class="panel-title"><i class="fas fa-chart-bar"></i> 案件查处呈现统计</h2>
             <div class="date-filter" style="padding: 10px 15px; display: flex; gap: 10px; align-items: center;">
                 <label style="color: #00D2FF; font-size: 12px;">日期筛选：</label>
-                <input type="date" id="cases-start-date" style="background: rgba(0,210,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 8px; border-radius: 4px;">
+                <input type="date" id="cases-start-date"
+                    style="background: rgba(0,210,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 8px; border-radius: 4px;">
                 <span style="color: #00D2FF;">至</span>
-                <input type="date" id="cases-end-date" style="background: rgba(0,210,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 8px; border-radius: 4px;">
-                <button onclick="filterCasesByDate()" style="background: linear-gradient(135deg, #00D2FF, #0080FF); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">查询</button>
-                <button onclick="resetCasesFilter()" style="background: rgba(255,255,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">重置</button>
+                <input type="date" id="cases-end-date"
+                    style="background: rgba(0,210,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 8px; border-radius: 4px;">
+                <button onclick="filterCasesByDate()"
+                    style="background: linear-gradient(135deg, #00D2FF, #0080FF); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">查询</button>
+                <button onclick="resetCasesFilter()"
+                    style="background: rgba(255,255,255,0.1); border: 1px solid #00D2FF; color: #00D2FF; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">重置</button>
             </div>
             <div id="chart-cases" class="chart-container"></div>
         </div>
-        
-        <!-- 右下角：AI智能助手 -->
-        <div class="panel" id="panel-ai">
-            <h2 class="panel-title"><i class="fas fa-robot"></i> 纪检AI智能助手</h2>
-            <div id="ai-container" class="chart-container" style="position: relative;"></div>
+
+        <!-- 左上角：违规事项分布 -->
+        <div class="panel" id="panel-violations">
+            <h2 class="panel-title"><i class="fas fa-chart-pie"></i> 违规事项分布呈现</h2>
+            <div id="chart-violations" class="chart-container"></div>
         </div>
     </div>
 
@@ -1597,7 +1654,8 @@
                 </div>
 
                 <div class="article-filters">
-                    <input type="text" class="admin-input" id="article-search" placeholder="搜索标题..." oninput="filterArticles()">
+                    <input type="text" class="admin-input" id="article-search" placeholder="搜索标题..."
+                        oninput="filterArticles()">
                     <select class="admin-select" id="article-region" onchange="filterArticles()">
                         <option value="">全部地区</option>
                     </select>
@@ -1711,7 +1769,8 @@
                 </div>
 
                 <div class="article-filters">
-                    <input type="text" class="admin-input" id="correction-search" placeholder="搜索文章标题..." oninput="filterCorrectionArticles()">
+                    <input type="text" class="admin-input" id="correction-search" placeholder="搜索文章标题..."
+                        oninput="filterCorrectionArticles()">
                     <button class="admin-btn" onclick="loadCorrectionArticles()">
                         <i class="fas fa-filter"></i> 显示全部待修正文章
                     </button>
@@ -2038,7 +2097,7 @@
         ];
 
         // ========== 初始化函数 ==========
-        window.onload = function() {
+        window.onload = function () {
             initViolationsChart();
             initCasesChart();
             initNewsScroll();  // 非阻塞加载，先显示Mock数据
@@ -2273,14 +2332,14 @@
                     if (tagStats.length === 0) {
                         // 使用Mock标签数据
                         const mockTags = [
-                            {'name': '执纪审查', 'value': 45},
-                            {'name': '党纪处分', 'value': 32},
-                            {'name': '省管干部', 'value': 18},
-                            {'name': '市管干部', 'value': 56},
-                            {'name': '县管干部', 'value': 89},
-                            {'name': '贪污受贿', 'value': 67},
-                            {'name': '滥用职权', 'value': 34},
-                            {'name': '形式主义', 'value': 28}
+                            { 'name': '执纪审查', 'value': 45 },
+                            { 'name': '党纪处分', 'value': 32 },
+                            { 'name': '省管干部', 'value': 18 },
+                            { 'name': '市管干部', 'value': 56 },
+                            { 'name': '县管干部', 'value': 89 },
+                            { 'name': '贪污受贿', 'value': 67 },
+                            { 'name': '滥用职权', 'value': 34 },
+                            { 'name': '形式主义', 'value': 28 }
                         ];
                         renderTagChart(mockTags);
                         return;
@@ -2292,10 +2351,10 @@
                     console.warn('获取案件统计数据失败:', error);
                     // 使用默认标签数据
                     const defaultTags = [
-                        {'name': '执纪审查', 'value': 10},
-                        {'name': '党纪处分', 'value': 8},
-                        {'name': '省管干部', 'value': 5},
-                        {'name': '市管干部', 'value': 15}
+                        { 'name': '执纪审查', 'value': 10 },
+                        { 'name': '党纪处分', 'value': 8 },
+                        { 'name': '省管干部', 'value': 5 },
+                        { 'name': '市管干部', 'value': 15 }
                     ];
                     renderTagChart(defaultTags);
                 });
@@ -2334,7 +2393,7 @@
                     borderColor: '#00D2FF',
                     borderWidth: 1,
                     textStyle: { color: '#00D2FF' },
-                    formatter: function(params) {
+                    formatter: function (params) {
                         let result = `${params[0].axisValue}<br/>`;
                         params.forEach(p => {
                             const marker = `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>`;
@@ -2542,14 +2601,14 @@
         function renderCasesWithMock() {
             // 使用默认标签数据渲染
             const defaultTags = [
-                {'name': '执纪审查', 'value': 15},
-                {'name': '党纪处分', 'value': 12},
-                {'name': '省管干部', 'value': 8},
-                {'name': '市管干部', 'value': 20},
-                {'name': '县管干部', 'value': 25},
-                {'name': '贪污受贿', 'value': 18},
-                {'name': '滥用职权', 'value': 10},
-                {'name': '形式主义', 'value': 14}
+                { 'name': '执纪审查', 'value': 15 },
+                { 'name': '党纪处分', 'value': 12 },
+                { 'name': '省管干部', 'value': 8 },
+                { 'name': '市管干部', 'value': 20 },
+                { 'name': '县管干部', 'value': 25 },
+                { 'name': '贪污受贿', 'value': 18 },
+                { 'name': '滥用职权', 'value': 10 },
+                { 'name': '形式主义', 'value': 14 }
             ];
             renderTagChart(defaultTags);
         }
@@ -2720,7 +2779,7 @@
             `;
 
             // 回车发送
-            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            document.getElementById('chat-input').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
                     sendMessage();
                 }
@@ -3191,8 +3250,106 @@
             }
         }
 
+        // ========== 登录状态检查和登出功能 ==========
+
+        // 获取 CSRF Token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // 检查登录状态
+        async function checkLoginStatus() {
+            try {
+                const response = await fetch('/api/users/me', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.code === 0 && data.data) {
+                        // 用户已登录，显示用户信息
+                        const userInfo = document.getElementById('userInfo');
+                        const userName = document.getElementById('userName');
+
+                        userName.textContent = data.data.username || '用户';
+                        userInfo.style.display = 'flex';
+
+                        console.log('用户已登录:', data.data);
+                        return true;
+                    }
+                }
+
+                // 未登录，跳转到登录页面
+                console.log('用户未登录，跳转到登录页面');
+                window.location.href = '/login.html';
+                return false;
+
+            } catch (error) {
+                console.error('检查登录状态失败:', error);
+                // 发生错误，跳转到登录页面
+                window.location.href = '/login.html';
+                return false;
+            }
+        }
+
+        // 处理登出
+        async function handleLogout() {
+            if (!confirm('确定要登出吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.code === 0) {
+                    console.log('登出成功');
+                    // 清除本地存储的记住的用户名
+                    localStorage.removeItem('remembered_username');
+                    // 跳转到登录页面
+                    window.location.href = '/login.html';
+                } else {
+                    alert('登出失败：' + (data.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('登出错误:', error);
+                alert('登出失败，请重试');
+            }
+        }
+
         // ========== 页面加载完成后初始化 ==========
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function () {
+            // 首先检查登录状态
+            const isLoggedIn = await checkLoginStatus();
+
+            // 如果未登录，checkLoginStatus 会自动跳转，不会执行后续代码
+            if (!isLoggedIn) {
+                return;
+            }
+
             // 初始化时间
             updateTime();
 
@@ -3424,7 +3581,7 @@
 
             // 添加点击事件委托
             container.querySelectorAll('.article-item').forEach(item => {
-                item.addEventListener('click', function() {
+                item.addEventListener('click', function () {
                     const url = this.getAttribute('data-url');
                     if (url && url !== '#') {
                         window.open(url, '_blank');
@@ -3832,8 +3989,8 @@
                         document.getElementById('monitor-api-latency').textContent = data.api.latency_ms + 'ms';
                         document.getElementById('monitor-api-health').innerHTML =
                             data.api.healthy ?
-                            '<span style="color: #00D2FF;"><i class="fas fa-check-circle"></i> 健康</span>' :
-                            '<span style="color: #ff6b6b;"><i class="fas fa-times-circle"></i> 异常</span>';
+                                '<span style="color: #00D2FF;"><i class="fas fa-check-circle"></i> 健康</span>' :
+                                '<span style="color: #ff6b6b;"><i class="fas fa-times-circle"></i> 异常</span>';
                     }
 
                     // 爬虫状态
@@ -4036,7 +4193,8 @@
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h3><i class="fas fa-file-export"></i> 导出报告</h3>
-                <span class="close-btn" onclick="document.getElementById('report-modal').style.display='none'">&times;</span>
+                <span class="close-btn"
+                    onclick="document.getElementById('report-modal').style.display='none'">&times;</span>
             </div>
             <div class="modal-body">
                 <p style="text-align: center; margin-bottom: 20px; color: #a0d8ef;">
@@ -4074,8 +4232,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         .modal-content {
@@ -4093,8 +4256,15 @@
         }
 
         @keyframes slideIn {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .modal-header {
@@ -4279,6 +4449,33 @@
             border-color: #00D2FF;
         }
 
+        /* ========== 3D 地图按钮样式 ========== */
+        .map-3d-btn {
+            background: linear-gradient(135deg, rgba(30, 98, 208, 0.3) 0%, rgba(10, 58, 145, 0.3) 100%);
+            border: 1px solid rgba(30, 98, 208, 0.6);
+            color: #00D2FF;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(30, 98, 208, 0.3);
+        }
+
+        .map-3d-btn:hover {
+            background: linear-gradient(135deg, rgba(30, 98, 208, 0.5) 0%, rgba(10, 58, 145, 0.5) 100%);
+            border-color: #00D2FF;
+            box-shadow: 0 0 25px rgba(30, 98, 208, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .map-3d-btn:active {
+            transform: translateY(0);
+        }
+
         /* ========== 统计卡片样式 ========== */
         .stats-cards {
             display: flex;
@@ -4309,5 +4506,5 @@
         }
     </style>
 </body>
-</html>
 
+</html>

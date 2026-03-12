@@ -7,10 +7,10 @@ import os
 
 # ========== 数据库配置 ==========
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
+    'host': os.getenv('DB_HOST', '127.0.0.1'),
     'port': int(os.getenv('DB_PORT', 3306)),
     'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', 'your_password'),
+    'password': os.getenv('DB_PASSWORD', '20060424007Hq265'),
     'database': os.getenv('DB_NAME', 'supervision'),
     'charset': 'utf8mb4',
     'pool_size': 10,

@@ -464,3 +464,241 @@ class AIChatView(APIView):
                 'message': 'Coze客户端初始化失败',
                 'data': {'status': 'error', 'sdk_available': True}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========== 登录认证相关 API ==========
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+
+
+class LoginView(APIView):
+    """用户登录 API"""
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        """处理用户登录请求"""
+        try:
+            username = request.data.get('username', '').strip()
+            password = request.data.get('password', '')
+            remember_me = request.data.get('remember_me', False)
+
+            # 验证输入
+            if not username or not password:
+                return Response({
+                    'code': -1,
+                    'message': '用户名和密码不能为空'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 认证用户
+            user = authenticate(request, username=username, password=password)
+
+            if user is not None:
+                if not user.is_active:
+                    return Response({
+                        'code': -1,
+                        'message': '账号已被禁用，请联系管理员'
+                    }, status=status.HTTP_403_FORBIDDEN)
+
+                # 登录用户（创建 Session）
+                login(request, user)
+
+                # 设置 Session 过期时间
+                if remember_me:
+                    # "记住我"：30天
+                    request.session.set_expiry(30 * 24 * 60 * 60)
+                else:
+                    # 默认：关闭浏览器后过期
+                    request.session.set_expiry(0)
+
+                # 获取用户角色
+                groups = list(user.groups.values_list('name', flat=True))
+                if user.is_staff:
+                    role = 'admin'
+                elif groups and 'editor' in groups:
+                    role = 'editor'
+                elif groups:
+                    role = groups[0]
+                else:
+                    role = 'viewer'
+
+                logger.info(f'用户 {username} 登录成功，角色：{role}')
+
+                return Response({
+                    'code': 0,
+                    'message': '登录成功',
+                    'data': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                        'is_staff': user.is_staff,
+                        'groups': groups,
+                        'role': role,
+                        'date_joined': user.date_joined.isoformat()
+                    }
+                })
+            else:
+                logger.warning(f'用户 {username} 登录失败：用户名或密码错误')
+                return Response({
+                    'code': -1,
+                    'message': '用户名或密码错误'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+        except Exception as e:
+            logger.exception('登录异常')
+            return Response({
+                'code': -1,
+                'message': f'登录失败：{str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LogoutView(APIView):
+    """用户登出 API"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """处理用户登出请求"""
+        try:
+            username = request.user.username
+            logout(request)
+            logger.info(f'用户 {username} 登出成功')
+
+            return Response({
+                'code': 0,
+                'message': '登出成功'
+            })
+
+        except Exception as e:
+            logger.exception('登出异常')
+            return Response({
+                'code': -1,
+                'message': f'登出失败：{str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ForgotPasswordView(APIView):
+    """忘记密码 API"""
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        """处理忘记密码请求"""
+        try:
+            username = request.data.get('username', '').strip()
+
+            if not username:
+                return Response({
+                    'code': -1,
+                    'message': '用户名不能为空'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 查找用户
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                # 为了安全，不透露用户是否存在
+                return Response({
+                    'code': 0,
+                    'message': '如果该用户存在，重置链接已生成',
+                    'data': {
+                        'info': '请联系管理员获取重置链接'
+                    }
+                })
+
+            # 生成密码重置 token
+            token_generator = PasswordResetTokenGenerator()
+            token = token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+            # 构建重置链接
+            reset_url = f'/reset-password.html?uid={uid}&token={token}'
+
+            logger.info(f'用户 {username} 请求密码重置，token 已生成')
+
+            # 注意：生产环境应该发送邮件，这里直接返回链接用于演示
+            return Response({
+                'code': 0,
+                'message': '密码重置链接已生成',
+                'data': {
+                    'reset_url': reset_url,
+                    'info': '请复制此链接并在浏览器中打开以重置密码'
+                }
+            })
+
+        except Exception as e:
+            logger.exception('忘记密码处理异常')
+            return Response({
+                'code': -1,
+                'message': f'处理失败：{str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ResetPasswordView(APIView):
+    """重置密码 API"""
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        """处理重置密码请求"""
+        try:
+            uid = request.data.get('uid', '')
+            token = request.data.get('token', '')
+            new_password = request.data.get('new_password', '')
+            confirm_password = request.data.get('confirm_password', '')
+
+            # 验证输入
+            if not all([uid, token, new_password, confirm_password]):
+                return Response({
+                    'code': -1,
+                    'message': '所有字段都不能为空'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if new_password != confirm_password:
+                return Response({
+                    'code': -1,
+                    'message': '两次输入的密码不一致'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if len(new_password) < 6:
+                return Response({
+                    'code': -1,
+                    'message': '密码长度至少6位'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 解码用户 ID
+            try:
+                user_id = force_str(urlsafe_base64_decode(uid))
+                user = User.objects.get(pk=user_id)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+                return Response({
+                    'code': -1,
+                    'message': '无效的重置链接'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 验证 token
+            token_generator = PasswordResetTokenGenerator()
+            if not token_generator.check_token(user, token):
+                return Response({
+                    'code': -1,
+                    'message': '重置链接已过期或无效，请重新申请'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 重置密码
+            user.password = make_password(new_password)
+            user.save()
+
+            logger.info(f'用户 {user.username} 密码重置成功')
+
+            return Response({
+                'code': 0,
+                'message': '密码重置成功，请使用新密码登录'
+            })
+
+        except Exception as e:
+            logger.exception('重置密码异常')
+            return Response({
+                'code': -1,
+                'message': f'重置失败：{str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -16,10 +16,15 @@ db.sqlite3-journal
 staticfiles/
 media/
 
-# Environment
+# Environment - 环境配置文件
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+
+# 允许提交的环境配置模板
+!.env.example
 
 # IDE
 .vscode/
