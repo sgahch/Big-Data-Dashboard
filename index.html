@@ -1634,19 +1634,18 @@
 
         // ========== 登录检查 ==========
         function checkLogin() {
-            const username = localStorage.getItem('username');
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            let username = localStorage.getItem('username');
+            let isLoggedIn = localStorage.getItem('isLoggedIn');
 
+            // 未登录则自动以访客身份进入（Vercel 静态部署无后端，禁用登录跳转）
             if (!isLoggedIn || isLoggedIn !== 'true') {
-                // 未登录，跳转到登录页面
-                window.location.href = '/login.html';
-                return false;
+                username = username || '访客';
+                localStorage.setItem('username', username);
+                localStorage.setItem('isLoggedIn', 'true');
             }
 
-            // 已登录，显示用户名
-            if (username) {
-                document.getElementById('current-username').textContent = username;
-            }
+            // 显示用户名
+            document.getElementById('current-username').textContent = username;
 
             return true;
         }
@@ -1654,12 +1653,10 @@
         // ========== 登出功能 ==========
         function logout() {
             if (confirm('确定要退出登录吗？')) {
-                // 清除登录状态
+                // 清除登录状态后直接刷新页面（checkLogin 会以访客身份自动恢复）
                 localStorage.removeItem('username');
                 localStorage.removeItem('isLoggedIn');
-
-                // 跳转到登录页面
-                window.location.href = '/login.html';
+                window.location.reload();
             }
         }
 
