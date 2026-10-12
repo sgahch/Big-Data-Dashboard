@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-清风网爬虫 API - 支持按地区爬取
+多源新闻爬虫 API - 支持清风网、中央纪委等多个新闻源
 """
 
 from http.server import BaseHTTPRequestHandler
@@ -13,6 +13,19 @@ import re
 import time
 from typing import List, Dict, Optional
 from urllib.parse import urljoin, urlparse, parse_qs
+import sys
+import os
+
+# 导入新闻源配置
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+try:
+    from news_sources_config import NEWS_SOURCES, get_enabled_sources, get_source_list
+except ImportError:
+    NEWS_SOURCES = {}
+    def get_enabled_sources():
+        return {}
+    def get_source_list():
+        return ['清风网']
 
 # 陕西各地区配置
 REGIONS = {

@@ -3,19 +3,71 @@
 import sys
 import os
 import json
+import socket
 
 # 设置UTF-8编码
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-# 加载 .env 文件
-env_path = os.path.join(os.path.dirname(__file__), '.env')
+# ========== 自动环境检测 ==========
+def detect_environment():
+    """自动检测运行环境"""
+    # 方法1: 检查环境变量
+    if os.getenv('ENV') == 'production':
+        return 'production'
+
+    # 方法2: 检查主机名（云服务器通常有特定主机名）
+    hostname = socket.gethostname().lower()
+    if any(keyword in hostname for keyword in ['server', 'cloud', 'aliyun', 'tencent', 'huawei', 'prod']):
+        return 'production'
+
+    # 方法3: 检查是否存在生产环境标识文件
+    if os.path.exists('/etc/production') or os.path.exists('.production'):
+        return 'production'
+
+    # 方法4: 检查IP地址（本地开发通常是127.0.0.1或192.168.x.x）
+    try:
+        hostname_ip = socket.gethostbyname(socket.gethostname())
+        # 如果不是本地IP，可能是生产环境
+        if not (hostname_ip.startswith('127.') or hostname_ip.startswith('192.168.') or hostname_ip.startswith('10.')):
+            return 'production'
+    except:
+        pass
+
+    return 'development'
+
+# 检测环境
+ENV = detect_environment()
+print(f"🌍 检测到环境: {ENV}")
+
+# 加载对应的 .env 文件
+# 根据环境选择配置文件
+if ENV == 'production':
+    env_file = '.env.prod'
+else:
+    env_file = '.env.dev'
+
+env_path = os.path.join(os.path.dirname(__file__), 'config', env_file)
+
+# 如果没有找到对应的环境文件，尝试加载默认的 .env
+if not os.path.exists(env_path):
+    env_path = os.path.join(os.path.dirname(__file__), 'config', '.env')
+    if not os.path.exists(env_path):
+        env_path = os.path.join(os.path.dirname(__file__), '.env')
+
 if os.path.exists(env_path):
+    print(f"📄 加载配置文件: {env_path}")
     with open(env_path, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
                 key, value = line.split('=', 1)
                 os.environ[key.strip()] = value.strip()
+else:
+    print(f"⚠️  未找到配置文件，使用默认配置")
+
+# 从环境变量获取最终的ENV值（可能被.env文件覆盖）
+ENV = os.getenv('ENV', ENV)
+IS_PROD = ENV == 'production'
 
 from flask import Flask, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
@@ -339,7 +391,7 @@ def get_regions():
 # ========== Coze AI客服代理API ==========
 
 # Coze API 配置
-COZE_API_TOKEN = os.environ.get('COZE_API_TOKEN', 'cztei_qcL0IvA41MVJ1CvchE2DBZxXstHGtQgluMzVTQeSmOVFkhQr7PSywIppHdRh23J1U')
+COZE_API_TOKEN = os.environ.get('COZE_API_TOKEN', 'pat_GFvRZZ9cCE6CkQufhLmS4vppOLv8424xJmv0MmdiSp3W1mJgkugaHyXtY8wdHyvc')
 COZE_BOT_ID = os.environ.get('COZE_BOT_ID', '7584448825868189732')
 
 # 使用官方 SDK cozepy
@@ -770,6 +822,8 @@ if __name__ == '__main__':
     print("=" * 60)
     print("  清风网爬虫服务 v5.0（数据库版）")
     print("=" * 60)
+    print(f"  环境: {ENV} ({'生产' if IS_PROD else '开发'})")
+    print(f"  数据库: SQLite")
     print("  访问地址: http://localhost:5000/")
     print("  API接口:")
     print("    - GET /api/news           # 获取新闻")

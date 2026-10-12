@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案 D · 科技蓝升级版（深色大屏 · 现行风格精修）— 纪检监察大数据可视化平台</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* ============ 设计 Token（现行科技蓝风的精修版） ============ */
+  :root{
+    --bg-0:#060b24;
+    --bg-1:#0b1130;
+    --panel:rgba(13,20,52,.88);
+    --panel-border:rgba(56,189,248,.22);
+    --panel-border-hover:rgba(56,189,248,.45);
+    --cyan:#38bdf8;
+    --cyan-soft:#7dd3fc;
+    --gold:#f5c542;
+    --ink:#e8f2fb;
+    --ink-dim:#9db8d2;
+    --ink-faint:#5d7a99;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:'Microsoft YaHei','Noto Sans SC',sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(56,189,248,.10), transparent 60%),
+      radial-gradient(900px 500px at 85% 110%, rgba(99,102,241,.08), transparent 60%),
+      linear-gradient(180deg,var(--bg-0) 0%,var(--bg-1) 100%);
+    color:var(--ink);
+    overflow:hidden;height:100vh;
+  }
+  /* 细腻网格底纹（比现行版更轻） */
+  body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(56,189,248,.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(56,189,248,.03) 1px,transparent 1px);
+    background-size:48px 48px;
+  }
+
+  /* 顶栏 */
+  .header{
+    position:fixed;top:0;left:0;width:100%;height:72px;z-index:1000;
+    background:linear-gradient(180deg,rgba(6,11,36,.96),rgba(6,11,36,.82));
+    border-bottom:1px solid var(--panel-border);
+    backdrop-filter:blur(14px);
+    display:flex;align-items:center;gap:24px;padding:0 32px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:9px;
+    background:linear-gradient(135deg,#0ea5e9,#6366f1);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:17px;
+    box-shadow:0 0 16px rgba(56,189,248,.35);
+  }
+  .header-title{
+    font-size:22px;font-weight:bold;letter-spacing:4px;
+    background:linear-gradient(90deg,#e8f2fb 20%,#7dd3fc 80%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  .header-title-sub{font-size:11px;color:var(--ink-faint);letter-spacing:2px;margin-top:2px;}
+  .nav-bar{display:flex;gap:8px;margin-left:auto;}
+  .nav-item{
+    padding:8px 18px;font-size:14px;color:var(--ink-dim);cursor:pointer;
+    border:1px solid transparent;border-radius:6px;transition:all .25s;
+  }
+  .nav-item:hover{color:var(--cyan-soft);border-color:var(--panel-border);}
+  .nav-item.active{
+    color:var(--cyan);border-color:var(--panel-border-hover);
+    background:rgba(56,189,248,.10);
+  }
+  .user-info{display:flex;align-items:center;gap:12px;margin-left:16px;}
+  .user-chip{
+    display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-dim);
+    padding:6px 14px;border:1px solid var(--panel-border);border-radius:9999px;
+  }
+  .user-chip i{color:var(--cyan);}
+  .logout-btn{
+    padding:7px 16px;font-size:13px;cursor:pointer;border-radius:9999px;
+    background:transparent;color:#fda4af;border:1px solid rgba(244,63,94,.35);
+    transition:all .25s;display:flex;align-items:center;gap:6px;
+  }
+  .logout-btn:hover{background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.6);}
+
+  /* 主区 */
+  .board{
+    position:relative;z-index:1;
+    display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);
+    gap:14px;padding:88px 16px 14px;height:100vh;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    backdrop-filter:blur(8px);
+    padding:14px 16px;display:flex;flex-direction:column;overflow:hidden;
+    transition:all .3s ease;position:relative;
+  }
+  /* 四角科技装饰（比现行版收敛） */
+  .panel::before,.panel::after{
+    content:'';position:absolute;width:12px;height:12px;pointer-events:none;
+  }
+  .panel::before{top:-1px;left:-1px;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan);border-top-left-radius:10px;}
+  .panel::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);border-bottom-right-radius:10px;}
+  .panel:hover{border-color:var(--panel-border-hover);box-shadow:0 4px 24px rgba(56,189,248,.12);}
+  .panel-title{
+    font-size:14px;font-weight:bold;color:var(--ink);
+    display:flex;align-items:center;gap:8px;
+    padding-bottom:9px;margin-bottom:8px;
+    border-bottom:1px solid rgba(56,189,248,.15);
+    flex-shrink:0;letter-spacing:1px;
+  }
+  .panel-title i{font-size:14px;color:var(--cyan);}
+  .panel-title .tag{
+    margin-left:auto;font-size:10px;color:var(--gold);
+    border:1px solid rgba(245,197,66,.35);padding:2px 8px;border-radius:4px;
+    letter-spacing:1px;font-weight:normal;
+  }
+  .chart{flex:1;min-height:0;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-mark"><i class="fas fa-shield-halved"></i></div>
+    <div>
+      <div class="header-title">纪检监察大数据可视化平台</div>
+      <div class="header-title-sub">DISCIPLINE INSPECTION BIG DATA PLATFORM</div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <div class="nav-item">数据采集</div>
+    <div class="nav-item">数据处理</div>
+    <div class="nav-item active">数据呈现</div>
+    <div class="nav-item">数据评估</div>
+  </div>
+  <div class="user-info">
+    <div class="user-chip"><i class="fas fa-circle-user"></i>访客</div>
+    <button class="logout-btn"><i class="fas fa-arrow-right-from-bracket"></i>登出</button>
+  </div>
+</div>
+
+<div class="board">
+  <div class="panel"><div class="panel-title"><i class="fas fa-chart-column"></i>案件查处呈现统计<span class="tag">实时</span></div><div class="chart" id="c1"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-chart-pie"></i>违规事项分布呈现</div><div class="chart" id="c2"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-city"></i>地区案件排名 TOP10</div><div class="chart" id="c3"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-tags"></i>热点关键词分析</div><div class="chart" id="c4"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-sitemap"></i>数据来源构成分析</div><div class="chart" id="c5"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-radar-chart"></i>风险维度综合雷达</div><div class="chart" id="c6"></div></div>
+</div>
+
+<script>
+/* 精修科技蓝：青蓝主调 + 金色点缀，去掉紫色的杂乱感 */
+var T = {
+  text:'#9db8d2', line:'rgba(56,189,248,.2)', split:'rgba(56,189,248,.08)',
+  palette:['#38bdf8','#6366f1','#f5c542','#2dd4bf','#f472b6','#818cf8','#34d399','#fb923c']
+};
+var base = { textStyle:{color:T.text,fontSize:11,fontFamily:'Microsoft YaHei,sans-serif'}, color:T.palette };
+function mk(id,opt){ var c=echarts.init(document.getElementById(id)); c.setOption(Object.assign({},base,opt)); window.addEventListener('resize',function(){c.resize();}); }
+var axisCommon = {
+  axisLine:{lineStyle:{color:T.line}}, axisTick:{show:false},
+  axisLabel:{color:T.text,fontSize:10}, splitLine:{lineStyle:{color:T.split}}
+};
+
+mk('c1',{
+  grid:{left:36,right:12,top:24,bottom:24},
+  tooltip:{trigger:'axis'},
+  xAxis:Object.assign({type:'category',data:['1月','2月','3月','4月','5月','6月','7月','8月']},axisCommon),
+  yAxis:Object.assign({type:'value'},axisCommon),
+  series:[{type:'bar',data:[42,38,55,47,63,58,71,66],barWidth:'46%',
+    itemStyle:{borderRadius:[3,3,0,0],
+      color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[
+        {offset:0,color:'#38bdf8'},{offset:1,color:'rgba(56,189,248,.15)'}]}},
+    emphasis:{itemStyle:{color:'#7dd3fc'}}}]
+});
+
+mk('c2',{
+  tooltip:{trigger:'item'},
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:10,itemHeight:10,icon:'circle'},
+  series:[{type:'pie',radius:['42%','68%'],center:['50%','44%'],
+    label:{color:T.text,fontSize:10},
+    labelLine:{lineStyle:{color:'rgba(157,184,210,.4)'}},
+    itemStyle:{borderColor:'#0b1130',borderWidth:2},
+    data:[
+      {value:34,name:'违规收送礼金'},{value:22,name:'公款吃喝'},
+      {value:18,name:'违规使用公车'},{value:14,name:'违规发放津补贴'},
+      {value:8,name:'违规采购'},{value:4,name:'其他'}]}]
+});
+
+mk('c3',{
+  grid:{left:44,right:30,top:8,bottom:24},
+  tooltip:{trigger:'axis'},
+  xAxis:Object.assign({type:'value'},axisCommon),
+  yAxis:Object.assign({type:'category',inverse:true,
+    data:['西安','咸阳','宝鸡','渭南','榆林','延安','汉中','安康','商洛','铜川']},axisCommon),
+  series:[{type:'bar',data:[96,78,65,58,52,47,40,33,28,22],barWidth:'55%',
+    showBackground:true,backgroundStyle:{color:'rgba(56,189,248,.06)'},
+    itemStyle:{borderRadius:[0,3,3,0],
+      color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[
+        {offset:0,color:'#6366f1'},{offset:1,color:'#38bdf8'}]}},
+    label:{show:true,position:'right',color:'#9db8d2',fontSize:10}}]
+});
+
+mk('c4',{
+  series:[{type:'wordCloud',shape:'circle',width:'96%',height:'92%',
+    sizeRange:[12,34],rotationRange:[0,0],gridSize:6,
+    textStyle:{fontFamily:'Microsoft YaHei',
+      color:function(){ return T.palette[Math.floor(Math.random()*T.palette.length)]; }},
+    emphasis:{textStyle:{color:'#ffffff',textShadow:'0 0 10px rgba(56,189,248,.8)'}},
+    data:[
+      {name:'中央八项规定',value:100},{name:'四风问题',value:86},{name:'违规收受礼金',value:72},
+      {name:'公款吃喝',value:64},{name:'形式主义',value:55},{name:'官僚主义',value:48},
+      {name:'通报曝光',value:42},{name:'警示教育',value:36},{name:'酒驾醉驾',value:30},
+      {name:'廉洁纪律',value:26},{name:'群众身边腐败',value:22},{name:'一案双查',value:18}]}]
+});
+
+mk('c5',{
+  tooltip:{trigger:'item'},
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:10,itemHeight:10,icon:'circle'},
+  series:[{type:'pie',radius:['30%','66%'],center:['50%','44%'],roseType:'radius',
+    label:{color:T.text,fontSize:10},
+    itemStyle:{borderColor:'#0b1130',borderWidth:2,borderRadius:4},
+    data:[
+      {value:40,name:'秦风网'},{value:24,name:'省纪委网站'},
+      {value:16,name:'市纪委网站'},{value:12,name:'人民网'},
+      {value:8,name:'其他来源'}]}]
+});
+
+mk('c6',{
+  tooltip:{},
+  radar:{
+    indicator:[
+      {name:'查处力度',max:100},{name:'覆盖广度',max:100},{name:'时效性',max:100},
+      {name:'数据准确性',max:100},{name:'线索完整性',max:100}],
+    radius:'62%',center:['50%','52%'],
+    axisName:{color:'#9db8d2',fontSize:10},
+    splitLine:{lineStyle:{color:'rgba(56,189,248,.15)'}},
+    splitArea:{areaStyle:{color:['rgba(56,189,248,.02)','rgba(56,189,248,.05)']}},
+    axisLine:{lineStyle:{color:'rgba(56,189,248,.15)'}}
+  },
+  series:[{type:'radar',
+    data:[
+      {value:[86,74,90,82,68],name:'本季度',
+       lineStyle:{color:'#38bdf8',width:2},itemStyle:{color:'#38bdf8'},
+       areaStyle:{color:'rgba(56,189,248,.2)'}},
+      {value:[70,66,78,74,60],name:'上季度',
+       lineStyle:{color:'#f5c542',width:1,type:'dashed'},itemStyle:{color:'#f5c542'},
+       areaStyle:{color:'rgba(245,197,66,.06)'}}]}],
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:12,itemHeight:8}
+});
+</script>
+</body>
+</html>

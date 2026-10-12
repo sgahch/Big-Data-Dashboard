@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>风格预览导航 — 纪检监察大数据可视化平台</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Microsoft YaHei','Noto Sans SC',sans-serif;
+    background:#f4f5f7;color:#161616;min-height:100vh;
+    padding:48px 24px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+  h1{font-size:24px;margin-bottom:8px;}
+  .desc{color:#525252;font-size:14px;margin-bottom:32px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .card{
+    background:#fff;border:1px solid #e0e0e0;border-radius:12px;
+    padding:24px;text-decoration:none;color:inherit;display:block;
+    transition:all .2s ease;
+  }
+  .card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px);}
+  .swatches{display:flex;gap:6px;margin-bottom:14px;}
+  .sw{width:22px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,.08);}
+  .card h2{font-size:17px;margin-bottom:6px;}
+  .card .en{font-size:12px;color:#8c8c8c;margin-bottom:10px;letter-spacing:.5px;}
+  .card p{font-size:13px;color:#525252;line-height:1.7;}
+  .card .go{margin-top:14px;font-size:13px;font-weight:600;color:#0f62fe;}
+  @media(max-width:760px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>风格预览 · 四套方案</h1>
+  <div class="desc">点击卡片在新标签页打开对应风格的「数据呈现」页预览。确定方向后告诉我编号（A / B / C / D），我再整站改造。</div>
+  <div class="grid">
+
+    <a class="card" href="./preview-A-linear.html" target="_blank">
+      <div class="swatches">
+        <div class="sw" style="background:#010102"></div>
+        <div class="sw" style="background:#0f1011"></div>
+        <div class="sw" style="background:#5e6ad2"></div>
+        <div class="sw" style="background:#828fff"></div>
+        <div class="sw" style="background:#f7f8f8"></div>
+      </div>
+      <h2>方案 A · 深色精致</h2>
+      <div class="en">Linear 风 · 近黑底 + 薰衣草蓝</div>
+      <p>保留深色大屏的沉浸感，但去掉霓虹光污染。极深近黑画布、炭灰面板、发丝边框，单一薰衣草蓝点缀。安静、专业、有软件工艺感，适合演示投影。</p>
+      <div class="go">打开预览 →</div>
+    </a>
+
+    <a class="card" href="./preview-B-ibm.html" target="_blank">
+      <div class="swatches">
+        <div class="sw" style="background:#ffffff"></div>
+        <div class="sw" style="background:#f4f4f4"></div>
+        <div class="sw" style="background:#0f62fe"></div>
+        <div class="sw" style="background:#161616"></div>
+        <div class="sw" style="background:#6929c4"></div>
+      </div>
+      <h2>方案 B · 政企稳重</h2>
+      <div class="en">IBM Carbon 风 · 白底 + 方正直角 + 企业蓝</div>
+      <p>浅色企业级设计系统：白画布、零圆角、无阴影，单一 IBM 蓝。克制、严谨、可信，最贴近政务/国企汇报场景的审美，长时间阅读不疲劳。</p>
+      <div class="go">打开预览 →</div>
+    </a>
+
+    <a class="card" href="./preview-C-stripe.html" target="_blank">
+      <div class="swatches">
+        <div class="sw" style="background:#f6f9fc"></div>
+        <div class="sw" style="background:#ffffff"></div>
+        <div class="sw" style="background:#533afd"></div>
+        <div class="sw" style="background:#1c1e54"></div>
+        <div class="sw" style="background:#ea2261"></div>
+      </div>
+      <h2>方案 C · 现代 SaaS</h2>
+      <div class="en">Stripe 风 · 浅灰蓝底 + 靛蓝 + 柔和渐变</div>
+      <p>现代互联网产品感：浅灰蓝画布、白卡浮动、靛蓝主色，顶部一条柔和的渐变 mesh。年轻、精致、有「高级感」，适合强调产品完成度的路演场合。</p>
+      <div class="go">打开预览 →</div>
+    </a>
+
+    <a class="card" href="./preview-D-techblue.html" target="_blank">
+      <div class="swatches">
+        <div class="sw" style="background:#060b24"></div>
+        <div class="sw" style="background:#0d1434"></div>
+        <div class="sw" style="background:#38bdf8"></div>
+        <div class="sw" style="background:#6366f1"></div>
+        <div class="sw" style="background:#f5c542"></div>
+      </div>
+      <h2>方案 D · 科技蓝升级版</h2>
+      <div class="en">现行风格精修 · 深蓝大屏 + 青金双色</div>
+      <p>在你现有科技蓝基础上做减法：统一为青蓝单主色、金色点缀，收敛发光与粒子特效，面板加四角科技装饰。大屏观感最「唬人」，改动成本最低。</p>
+      <div class="go">打开预览 →</div>
+    </a>
+
+  </div>
+</div>
+</body>
+</html>

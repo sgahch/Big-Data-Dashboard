@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D地图模板 - 可直接使用</title>
+
+    <!-- ECharts 核心库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- ECharts GL 3D扩展 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        #map-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .info-panel h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .info-panel p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loading" id="loader">🌍 加载3D地图中...</div>
+
+    <div class="info-panel">
+        <h3>📍 3D地图示例</h3>
+        <p>🖱️ 拖拽旋转地图</p>
+        <p>🔍 滚轮缩放视角</p>
+        <p>👆 点击城市标记跳转</p>
+    </div>
+
+    <div id="map-container"></div>
+
+    <script>
+        // ==========================================
+        // 配置区域 - 根据需求修改
+        // ==========================================
+
+        // 1. 地图配置
+        const MAP_CONFIG = {
+            // 地图名称（用于注册）
+            name: 'china-province',
+            // GeoJSON 数据源（阿里云 DataV）
+            // 格式：https://geo.datav.aliyun.com/areas_v3/bound/{行政区划代码}_full.json
+            // 610000 = 陕西省, 110000 = 北京市, 100000 = 全国
+            geoJsonUrl: 'https://geo.datav.aliyun.com/areas_v3/bound/610000_full.json'
+        };
+
+        // 2. 城市坐标配置
+        const CITIES = {
+            '西安': { coord: [108.9398, 34.3416], url: 'https://www.example.com/xian' },
+            '宝鸡': { coord: [107.2371, 34.3619], url: 'https://www.example.com/baoji' },
+            '咸阳': { coord: [108.7091, 34.3296], url: 'https://www.example.com/xianyang' },
+            '渭南': { coord: [109.5102, 34.4994], url: 'https://www.example.com/weinan' },
+            '铜川': { coord: [108.9457, 34.8972], url: 'https://www.example.com/tongchuan' },
+            '延安': { coord: [109.4897, 36.5853], url: 'https://www.example.com/yanan' },
+            '榆林': { coord: [109.7412, 38.2909], url: 'https://www.example.com/yulin' },
+            '汉中': { coord: [107.0230, 33.0678], url: 'https://www.example.com/hanzhong' },
+            '安康': { coord: [109.0291, 32.6853], url: 'https://www.example.com/ankang' },
+            '商洛': { coord: [109.9404, 33.8703], url: 'https://www.example.com/shangluo' }
+        };
+
+        // 3. 样式配置
+        const STYLE_CONFIG = {
+            // 标记高度
+            markerHeight: 15,
+            // 热区大小（越大越容易点击）
+            hotspotSize: 200,
+            // 标记大小
+            markerSize: 30,
+            // 标记颜色
+            markerColor: '#ea4335',
+            // 地图颜色（蓝色）
+            mapColor: '#4285F4',
+            // 高亮颜色（白色）
+            highlightColor: '#ffffff',
+            // 自动旋转速度
+            rotateSpeed: 1.5
+        };
+
+        // ==========================================
+        // 核心代码 - 无需修改
+        // ==========================================
+
+        const chart = echarts.init(document.getElementById('map-container'));
+        let activeRegion = '';
+        let mouseDownTime = 0;
+
+        async function initMap() {
+            try {
+                // 加载 GeoJSON 数据
+                const response = await fetch(MAP_CONFIG.geoJsonUrl);
+                const geoJson = await response.json();
+
+                // 隐藏加载提示
+                document.getElementById('loader').style.display = 'none';
+
+                // 注册地图
+                echarts.registerMap(MAP_CONFIG.name, geoJson);
+
+                // 配置图表选项
+                const option = {
+                    backgroundColor: 'transparent',
+
+                    // 3D 地图配置
+                    geo3D: {
+                        map: MAP_CONFIG.name,
+                        roam: true,  // 允许交互
+                        silent: false,
+                        boxHeight: 6,  // 3D盒子高度
+                        regionHeight: 2.5,  // 区域高度
+
+                        // 地图样式
+                        itemStyle: {
+                            color: STYLE_CONFIG.mapColor,
+                            opacity: 1,
+                            borderWidth: 1.5,
+                            borderColor: '#81c784'
+                        },
+
+                        // 高亮样式
+                        emphasis: {
+                            itemStyle: {
+                                color: STYLE_CONFIG.highlightColor,
+                                opacity: 0.9
+                            },
+                            label: {
+                                show: true,
+                                textStyle: {
+                                    color: '#fff',
+                                    fontSize: 16,
+                                    fontWeight: 'bold'
+                                }
+                            }
+                        },
+
+                        // 光照效果
+                        shading: 'lambert',
+                        light: {
+                            main: {
+                                intensity: 1.5,
+                                shadow: true,
+                                alpha: 50
+                            },
+                            ambient: {
+                                intensity: 0.6
+                            }
+                        },
+
+                        // 视角控制
+                        viewControl: {
+                            distance: 90,  // 视角距离
+                            alpha: 40,  // 上下旋转角度
+                            beta: 10,  // 左右旋转角度
+                            autoRotate: true,  // 自动旋转
+                            autoRotateSpeed: STYLE_CONFIG.rotateSpeed,
+                            panMouseButton: 'right'  // 右键平移
+                        },
+
+                        // 区域样式（可自定义不同区域的高度和颜色）
+                        regions: geoJson.features.map(feature => {
+                            const name = feature.properties.name;
+                            let height = 1.0;
+                            let color = '#f1f8e9';
+
+                            // 示例：北部区域更高
+                            if (['榆林市', '延安市'].includes(name)) {
+                                height = 4.0;
+                                color = '#fff9c4';
+                            }
+                            // 南部区域中等高度
+                            else if (['汉中市', '安康市', '商洛市'].includes(name)) {
+                                height = 3.5;
+                                color = '#e8f5e9';
+                            }
+
+                            return {
+                                name: name,
+                                height: height,
+                                itemStyle: { color: color }
+                            };
+                        })
+                    },
+
+                    // 系列配置
+                    series: [
+                        // ==========================================
+                        // 第一层：隐形大热区（负责捕捉点击）
+                        // ==========================================
+                        {
+                            type: 'scatter3D',
+                            coordinateSystem: 'geo3D',
+                            symbol: 'circle',
+                            symbolSize: STYLE_CONFIG.hotspotSize,  // 超大触发区域
+                            itemStyle: {
+                                color: '#ffffff',
+                                opacity: 0.001  // 几乎透明
+                            },
+                            label: { show: false },
+                            silent: false,  // 可响应事件
+                            data: Object.entries(CITIES).map(([name, info]) => ({
+                                name: name,
+                                value: [...info.coord, 3]  // 高度为3
+                            }))
+                        },
+
+                        // ==========================================
+                        // 第二层：可见标记（负责视觉展示）
+                        // ==========================================
+                        {
+                            type: 'scatter3D',
+                            coordinateSystem: 'geo3D',
+                            symbol: 'pin',
+                            symbolSize: STYLE_CONFIG.markerSize,
+                            itemStyle: {
+                                color: STYLE_CONFIG.markerColor,
+                                opacity: 1
+                            },
+                            label: {
+                                show: true,
+                                position: 'top',
+                                formatter: '{b}',
+                                textStyle: {
+                                    color: '#333',
+                                    fontSize: 12,
+                                    fontWeight: 'bold',
+                                    backgroundColor: '#fff',
+                                    padding: [3, 6],
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    borderColor: '#dadce0'
+                                }
+                            },
+                            data: Object.entries(CITIES).map(([name, info]) => ({
+                                name: name,
+                                value: [...info.coord, STYLE_CONFIG.markerHeight]
+                            }))
+                        }
+                    ]
+                };
+
+                // 设置图表选项
+                chart.setOption(option);
+
+                // ==========================================
+                // 事件处理
+                // ==========================================
+
+                // 鼠标移动 - 记录当前悬停的城市
+                chart.on('mousemove', function (params) {
+                    if (params.seriesType === 'scatter3D' && params.name) {
+                        activeRegion = params.name;
+                        document.body.style.cursor = 'pointer';
+                    }
+                });
+
+                // 鼠标移出
+                chart.on('mouseout', function () {
+                    activeRegion = '';
+                    document.body.style.cursor = 'default';
+                });
+
+                // 鼠标按下 - 记录时间
+                chart.getZr().on('mousedown', function () {
+                    mouseDownTime = Date.now();
+                });
+
+                // 鼠标抬起 - 判断是点击还是拖拽
+                chart.getZr().on('mouseup', function () {
+                    const timeDiff = Date.now() - mouseDownTime;
+
+                    // 时间差 < 300ms 且鼠标在城市热区内 = 点击
+                    if (timeDiff < 300 && activeRegion !== '') {
+                        handleCityClick(activeRegion);
+                    }
+                });
+
+                // 窗口大小改变时重新渲染
+                window.addEventListener('resize', () => chart.resize());
+
+            } catch (error) {
+                console.error('地图加载失败:', error);
+                document.getElementById('loader').textContent = '❌ 地图加载失败';
+            }
+        }
+
+        // 处理城市点击事件
+        function handleCityClick(cityName) {
+            console.log('点击城市:', cityName);
+
+            const cityInfo = CITIES[cityName];
+            if (!cityInfo || !cityInfo.url) {
+                console.warn('未找到城市链接:', cityName);
+                return;
+            }
+
+            // 防弹窗拦截的跳转方式
+            const link = document.createElement('a');
+            link.href = cityInfo.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 初始化地图
+        initMap();
+    </script>
+</body>
+
+</html>

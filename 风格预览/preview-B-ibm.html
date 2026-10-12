@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案 B · 政企稳重（IBM Carbon 风）— 纪检监察大数据可视化平台</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ 设计 Token（源自 IBM Carbon 设计系统） ============ */
+  :root{
+    --canvas:#ffffff;
+    --surface-1:#f4f4f4;
+    --surface-2:#e0e0e0;
+    --hairline:#e0e0e0;
+    --ink:#161616;
+    --ink-muted:#525252;
+    --ink-subtle:#8c8c8c;
+    --primary:#0f62fe;
+    --blue-hover:#0050e6;
+    --inverse:#161616;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:'IBM Plex Sans','Noto Sans SC','Microsoft YaHei',sans-serif;
+    background:var(--surface-1);
+    color:var(--ink);
+    overflow:hidden;height:100vh;
+    letter-spacing:0.16px;
+  }
+
+  /* 顶部灰色 utility bar 32px */
+  .utility-bar{
+    position:fixed;top:0;left:0;width:100%;height:32px;z-index:1001;
+    background:var(--surface-1);border-bottom:1px solid var(--hairline);
+    display:flex;align-items:center;padding:0 24px;
+    font-size:12px;color:var(--ink-muted);letter-spacing:0.32px;gap:20px;
+  }
+  .utility-bar .right{margin-left:auto;display:flex;gap:16px;}
+  .utility-bar i{font-size:11px;margin-right:4px;}
+
+  /* 白色主导航 56px，方形 */
+  .header{
+    position:fixed;top:32px;left:0;width:100%;height:56px;z-index:1000;
+    background:var(--canvas);border-bottom:1px solid var(--hairline);
+    display:flex;align-items:stretch;padding:0 0 0 24px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-right:32px;}
+  .brand-mark{
+    width:30px;height:30px;background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+  }
+  .brand-name{font-size:16px;font-weight:400;letter-spacing:0;}
+  .brand-name strong{font-weight:600;}
+  .nav-bar{display:flex;align-items:stretch;}
+  .nav-item{
+    display:flex;align-items:center;padding:0 20px;cursor:pointer;
+    font-size:14px;color:var(--ink-muted);
+    border-bottom:2px solid transparent;transition:all .15s ease;
+  }
+  .nav-item:hover{color:var(--ink);background:var(--surface-1);}
+  .nav-item.active{color:var(--ink);font-weight:600;border-bottom-color:var(--primary);}
+  .header-right{margin-left:auto;display:flex;align-items:center;gap:12px;padding:0 24px;}
+  .user-chip{font-size:13px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;}
+  .logout-btn{
+    height:40px;padding:0 16px;font-size:14px;cursor:pointer;
+    background:var(--canvas);color:var(--primary);border:1px solid var(--primary);
+    font-family:inherit;letter-spacing:0.16px;transition:all .15s ease;
+    display:flex;align-items:center;gap:6px;border-radius:0;
+  }
+  .logout-btn:hover{background:var(--primary);color:#fff;}
+
+  /* 主区：方形卡片，1px 发丝边框，无阴影 */
+  .board{
+    display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);
+    gap:1px;padding:100px 12px 12px;height:100vh;background:var(--hairline);
+  }
+  .panel{
+    background:var(--canvas);
+    padding:16px 20px;display:flex;flex-direction:column;overflow:hidden;
+    border-radius:0;transition:background .15s ease;
+  }
+  .panel:hover{background:#fafafa;}
+  .panel-title{
+    font-size:14px;font-weight:600;color:var(--ink);
+    display:flex;align-items:center;gap:8px;
+    padding-bottom:12px;margin-bottom:10px;border-bottom:1px solid var(--hairline);
+    flex-shrink:0;letter-spacing:0.16px;
+  }
+  .panel-title i{font-size:14px;color:var(--primary);}
+  .panel-title .tag{
+    margin-left:auto;font-size:12px;font-weight:400;color:var(--ink-subtle);
+  }
+  .chart{flex:1;min-height:0;}
+</style>
+</head>
+<body>
+
+<div class="utility-bar">
+  <span><i class="fas fa-location-dot"></i>陕西省 · 纪检监察数据专区</span>
+  <span><i class="fas fa-circle" style="color:#24a148;font-size:8px;"></i>数据链路正常</span>
+  <div class="right">
+    <span><i class="far fa-clock"></i>最后更新 2026-09-29 08:30</span>
+    <span><i class="far fa-circle-question"></i>帮助</span>
+  </div>
+</div>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-mark"><i class="fas fa-shield-halved"></i></div>
+    <div class="brand-name"><strong>纪检监察</strong>大数据可视化平台</div>
+  </div>
+  <div class="nav-bar">
+    <div class="nav-item">数据采集</div>
+    <div class="nav-item">数据处理</div>
+    <div class="nav-item active">数据呈现</div>
+    <div class="nav-item">数据评估</div>
+  </div>
+  <div class="header-right">
+    <div class="user-chip"><i class="far fa-circle-user"></i>访客</div>
+    <button class="logout-btn"><i class="fas fa-arrow-right-from-bracket"></i>登出</button>
+  </div>
+</div>
+
+<div class="board">
+  <div class="panel"><div class="panel-title"><i class="fas fa-chart-column"></i>案件查处呈现统计<span class="tag">单位：件</span></div><div class="chart" id="c1"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-chart-pie"></i>违规事项分布呈现</div><div class="chart" id="c2"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-city"></i>地区案件排名 TOP10</div><div class="chart" id="c3"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-tags"></i>热点关键词分析</div><div class="chart" id="c4"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-sitemap"></i>数据来源构成分析</div><div class="chart" id="c5"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-radar-chart"></i>风险维度综合雷达</div><div class="chart" id="c6"></div></div>
+</div>
+
+<script>
+/* Carbon 图表主题：IBM Blue + Carbon 分类色板 */
+var T = {
+  text:'#525252', line:'#e0e0e0', split:'#f4f4f4',
+  palette:['#0f62fe','#6929c4','#1192e8','#005d5d','#9f1853','#fa4d56','#198038','#b28600','#ee538b','#570408']
+};
+var base = { textStyle:{color:T.text,fontSize:11,fontFamily:'IBM Plex Sans,Noto Sans SC,Microsoft YaHei,sans-serif'}, color:T.palette };
+function mk(id,opt){ var c=echarts.init(document.getElementById(id)); c.setOption(Object.assign({},base,opt)); window.addEventListener('resize',function(){c.resize();}); }
+var axisCommon = {
+  axisLine:{lineStyle:{color:T.line}}, axisTick:{show:false},
+  axisLabel:{color:T.text,fontSize:10}, splitLine:{lineStyle:{color:T.split}}
+};
+
+mk('c1',{
+  grid:{left:36,right:12,top:24,bottom:24},
+  tooltip:{trigger:'axis'},
+  xAxis:Object.assign({type:'category',data:['1月','2月','3月','4月','5月','6月','7月','8月']},axisCommon),
+  yAxis:Object.assign({type:'value'},axisCommon),
+  series:[{type:'bar',data:[42,38,55,47,63,58,71,66],barWidth:'46%',
+    itemStyle:{color:'#0f62fe'},
+    emphasis:{itemStyle:{color:'#0050e6'}}}]
+});
+
+mk('c2',{
+  tooltip:{trigger:'item'},
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:10,itemHeight:10,icon:'rect'},
+  series:[{type:'pie',radius:['42%','68%'],center:['50%','44%'],
+    label:{color:T.text,fontSize:10},
+    labelLine:{lineStyle:{color:'#c6c6c6'}},
+    itemStyle:{borderColor:'#ffffff',borderWidth:2},
+    data:[
+      {value:34,name:'违规收送礼金'},{value:22,name:'公款吃喝'},
+      {value:18,name:'违规使用公车'},{value:14,name:'违规发放津补贴'},
+      {value:8,name:'违规采购'},{value:4,name:'其他'}]}]
+});
+
+mk('c3',{
+  grid:{left:44,right:30,top:8,bottom:24},
+  tooltip:{trigger:'axis'},
+  xAxis:Object.assign({type:'value'},axisCommon),
+  yAxis:Object.assign({type:'category',inverse:true,
+    data:['西安','咸阳','宝鸡','渭南','榆林','延安','汉中','安康','商洛','铜川']},axisCommon),
+  series:[{type:'bar',data:[96,78,65,58,52,47,40,33,28,22],barWidth:'55%',
+    showBackground:true,backgroundStyle:{color:'#f4f4f4'},
+    itemStyle:{color:'#0f62fe'},
+    label:{show:true,position:'right',color:'#525252',fontSize:10}}]
+});
+
+mk('c4',{
+  series:[{type:'wordCloud',shape:'circle',width:'96%',height:'92%',
+    sizeRange:[12,34],rotationRange:[0,0],gridSize:6,
+    textStyle:{fontFamily:'Noto Sans SC,Microsoft YaHei',
+      color:function(){ return T.palette[Math.floor(Math.random()*T.palette.length)]; }},
+    emphasis:{textStyle:{color:'#161616',fontWeight:'bold'}},
+    data:[
+      {name:'中央八项规定',value:100},{name:'四风问题',value:86},{name:'违规收受礼金',value:72},
+      {name:'公款吃喝',value:64},{name:'形式主义',value:55},{name:'官僚主义',value:48},
+      {name:'通报曝光',value:42},{name:'警示教育',value:36},{name:'酒驾醉驾',value:30},
+      {name:'廉洁纪律',value:26},{name:'群众身边腐败',value:22},{name:'一案双查',value:18}]}]
+});
+
+mk('c5',{
+  tooltip:{trigger:'item'},
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:10,itemHeight:10,icon:'rect'},
+  series:[{type:'pie',radius:['30%','66%'],center:['50%','44%'],roseType:'radius',
+    label:{color:T.text,fontSize:10},
+    itemStyle:{borderColor:'#ffffff',borderWidth:2},
+    data:[
+      {value:40,name:'秦风网'},{value:24,name:'省纪委网站'},
+      {value:16,name:'市纪委网站'},{value:12,name:'人民网'},
+      {value:8,name:'其他来源'}]}]
+});
+
+mk('c6',{
+  tooltip:{},
+  radar:{
+    indicator:[
+      {name:'查处力度',max:100},{name:'覆盖广度',max:100},{name:'时效性',max:100},
+      {name:'数据准确性',max:100},{name:'线索完整性',max:100}],
+    radius:'62%',center:['50%','52%'],
+    axisName:{color:'#525252',fontSize:10},
+    splitLine:{lineStyle:{color:'#e0e0e0'}},
+    splitArea:{areaStyle:{color:['#ffffff','#f4f4f4']}},
+    axisLine:{lineStyle:{color:'#e0e0e0'}}
+  },
+  series:[{type:'radar',
+    data:[
+      {value:[86,74,90,82,68],name:'本季度',
+       lineStyle:{color:'#0f62fe',width:2},itemStyle:{color:'#0f62fe'},
+       areaStyle:{color:'rgba(15,98,254,0.15)'}},
+      {value:[70,66,78,74,60],name:'上季度',
+       lineStyle:{color:'#8c8c8c',width:1,type:'dashed'},itemStyle:{color:'#8c8c8c'},
+       areaStyle:{color:'rgba(140,140,140,0.08)'}}]}],
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:12,itemHeight:8}
+});
+</script>
+</body>
+</html>

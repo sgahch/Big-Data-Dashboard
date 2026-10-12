@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>监督数据分析 · 本地智能算法演示</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --ink2:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --brand2:#dbeafe;
+    --ok:#16a34a; --warn:#d97706; --danger:#dc2626;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);
+       font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+       line-height:1.6;padding:24px;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  header{margin-bottom:22px;}
+  h1{font-size:24px;font-weight:700;}
+  .sub{color:var(--ink2);font-size:13px;margin-top:6px;}
+  .badge{display:inline-block;background:var(--brand2);color:var(--brand);
+         font-size:12px;padding:2px 10px;border-radius:999px;margin-left:8px;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;}
+  .card .num{font-size:26px;font-weight:700;color:var(--brand);}
+  .card .lbl{font-size:12px;color:var(--ink2);margin-top:2px;}
+  section{background:var(--card);border:1px solid var(--line);border-radius:10px;
+          padding:18px;margin-bottom:18px;}
+  h2{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+  h2::before{content:"";width:4px;height:16px;background:var(--brand);border-radius:2px;}
+  .desc{font-size:12px;color:var(--ink2);margin-bottom:14px;}
+  textarea,input[type=text]{width:100%;border:1px solid var(--line);border-radius:8px;
+    padding:10px;font-size:13px;font-family:inherit;resize:vertical;}
+  textarea:focus,input[type=text]:focus{outline:none;border-color:var(--brand);}
+  button{background:var(--brand);color:#fff;border:none;border-radius:8px;
+    padding:9px 18px;font-size:13px;cursor:pointer;font-family:inherit;}
+  button:hover{opacity:.9;}
+  button.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand);}
+  .row{display:flex;gap:10px;align-items:flex-start;margin-top:10px;flex-wrap:wrap;}
+  .row input{flex:1;min-width:220px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+  th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;}
+  th{color:var(--ink2);font-weight:600;font-size:12px;background:#fafafa;}
+  .bar{height:8px;background:var(--brand);border-radius:4px;display:inline-block;}
+  .tagline{display:inline-block;background:#f3f4f6;color:var(--ink2);
+    font-size:11px;padding:1px 7px;border-radius:4px;margin:0 4px 4px 0;}
+  .kw{background:#fef3c7;color:#92400e;}
+  .result{background:#f8fafc;border:1px solid var(--line);border-radius:8px;
+    padding:14px;margin-top:12px;font-size:13px;}
+  .verdict{font-size:16px;font-weight:700;color:var(--brand);}
+  .muted{color:var(--ink2);font-size:12px;}
+  .pill{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;
+    background:#eef2ff;color:#4338ca;margin-left:6px;}
+  .chatbox{max-height:260px;overflow:auto;border:1px solid var(--line);
+    border-radius:8px;padding:12px;font-size:13px;background:#fafafa;}
+  .msg{margin-bottom:10px;}
+  .msg.me{text-align:right;color:var(--brand);font-weight:600;}
+  .msg.ai{color:var(--ink);}
+  .flex{display:flex;gap:18px;flex-wrap:wrap;}
+  .flex>div{flex:1;min-width:280px;}
+  svg text{font-size:11px;fill:var(--ink2);}
+  .foot{text-align:center;color:var(--ink2);font-size:12px;margin-top:26px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>监督数据分析 · 本地智能算法演示<span class="badge">完全离线运行</span></h1>
+  <div class="sub">
+    全部算法由本项目自研实现，<b>不调用任何第三方大模型 API</b>，断网可正常演示。
+    数据源：真实公开通报，共 <b id="total">–</b> 条，<b>姓名已脱敏</b>（职务与处置方式保留）。
+  </div>
+</header>
+
+<div class="cards">
+  <div class="card"><div class="num" id="c1">–</div><div class="lbl">案件总数</div></div>
+  <div class="card"><div class="num" id="c2">–</div><div class="lbl">覆盖地市</div></div>
+  <div class="card"><div class="num" id="c3">–</div><div class="lbl">问题类型</div></div>
+  <div class="card"><div class="num" id="c4">–</div><div class="lbl">时间跨度</div></div>
+  <div class="card"><div class="num" id="c5">–</div><div class="lbl">自动打标覆盖率</div></div>
+</div>
+
+<!-- ============ 1. 违规类型智能判定 ============ -->
+<section>
+  <h2>一、违规类型智能判定（加权多因子打分）</h2>
+  <div class="desc">
+    自研判定模型：<b>三因子加权</b> = 领域关键词(含近义词) × 权重 + 处置方式权重 + 职务层级权重。
+    每项得分可追溯，评委可看到"为什么判成这一类"，而非黑盒输出。
+  </div>
+  <textarea id="caseInput" rows="2">某市生态环境局分局局长【姓名脱敏】涉嫌严重违纪违法，目前正接受审查调查</textarea>
+  <div class="row">
+    <button onclick="classify()">开始判定</button>
+    <button class="ghost" onclick="randomCase()">随机取一条真实案件</button>
+  </div>
+  <div id="classifyOut"></div>
+</section>
+
+<!-- ============ 2. 地区风险热度 ============ -->
+<section>
+  <h2>二、地区风险热度评估（多维合成）</h2>
+  <div class="desc">
+    热度 = 案件数量(50%) + 平均严重程度(30%) + 近年活跃度(20%)，归一化后排序。
+  </div>
+  <div class="flex">
+    <div><div id="heatTable"></div></div>
+    <div><div id="heatChart"></div></div>
+  </div>
+</section>
+
+<!-- ============ 3. 自然语言查询 ============ -->
+<section>
+  <h2>三、自然语言查询（本地意图识别，离线可用）</h2>
+  <div class="desc">
+    本地分词 + 意图规则匹配 + 槽位抽取（年份/地区/类型），不依赖任何云端接口。
+    试试：<code>哪个地区最多</code> · <code>2025年有多少起</code> · <code>执纪审查多少</code> · <code>预测明年趋势</code>
+  </div>
+  <div class="chatbox" id="chat"></div>
+  <div class="row">
+    <input type="text" id="qInput" placeholder="输入你的问题…" onkeydown="if(event.key==='Enter')ask()">
+    <button onclick="ask()">提问</button>
+    <button class="ghost" onclick="clearChat()">清空</button>
+  </div>
+</section>
+
+<!-- ============ 4. 趋势预测 ============ -->
+<section>
+  <h2>四、案件趋势分析与预测</h2>
+  <div class="desc">历史序列 + 线性回归外推，纯前端计算，可视化呈现。</div>
+  <div id="trendChart"></div>
+  <div id="trendText" class="muted" style="margin-top:10px"></div>
+</section>
+
+<div class="foot">
+  本页为本地自研算法演示 · 数据已脱敏 · 「AI 辅助制作」标注见配套材料
+</div>
+
+</div>
+
+<script src="data/cases.js"></script>
+<script>
+/* =========================================================
+   自研算法实现（全部本地计算，无外部依赖）
+   ========================================================= */
+const DATA = window.CASE_DATA || [];
+
+/* ---------- 判定规则表：核心关键词 / 近义词 / 上下文行动词 ---------- */
+const RULES = [
+  { type:'执纪审查', core:['接受审查调查','接受纪律审查','接受监察调查','接受纪律审查和监察调查'],
+    syn:['审查调查','纪律审查','监察调查','立案审查'], act:['接受'], base:60, sev:2 },
+  { type:'党纪处分', core:['开除党籍','严重违纪违法','开除党籍和公职','留党察看','撤销党内职务'],
+    syn:['党纪处分','党籍','党内警告'], act:['被开除','受到'], base:70, sev:3 },
+  { type:'政务处分', core:['开除公职','政务处分','撤职','降级'],
+    syn:['政务处分','处分'], act:['被'], base:65, sev:3 },
+  { type:'贪污受贿', core:['受贿','贪污','收受巨额财物','行贿'],
+    syn:['受贿','贪污','利益输送'], act:['涉嫌'], base:66, sev:3 },
+  { type:'违规插手工程', core:['插手工程建设','工程项目','招投标','承揽工程'],
+    syn:['工程','招投标','项目分包'], act:['插手','干预'], base:60, sev:2 },
+  { type:'扶贫领域', core:['扶贫','脱贫','乡村振兴资金'],
+    syn:['扶贫','脱贫','惠民资金'], act:['挪用','冒领'], base:58, sev:2 },
+  { type:'生态环保', core:['生态环保','环境保护','污染防治','生态环境'],
+    syn:['环保','污染','生态'], act:['失职','监管不力'], base:56, sev:2 },
+  { type:'教育医疗', core:['教育','医疗','学校','医院','医保'],
+    syn:['教育','医疗','招生','药品'], act:['违规'], base:54, sev:2 },
+  { type:'市管干部', core:['市管干部','副市级','正处级','厅局级'],
+    syn:['市管','厅级','处级'], act:[], base:52, sev:2 }
+];
+/* 职务层级权重 */
+const RANK = [
+  { kw:['省委','省长','副省长','省级'], w:30, label:'省部级' },
+  { kw:['市委','市长','副市长','市管','市政协','市人大'], w:24, label:'市厅级' },
+  { kw:['局长','县长','区长','书记','主任','行长','检察长','部长','厅长'], w:18, label:'县处级' },
+  { kw:['董事长','总经理','总裁','经理','董事'], w:14, label:'国企/企业负责人' },
+  { kw:['所长','站长','队长','科长','处长','院长','组长','巡视员','委员'], w:10, label:'科级及以下' }
+];
+/* 处置方式附加权重 */
+const ACTION = [
+  { kw:['开除党籍','开除公职'], w:26, label:'双开' },
+  { kw:['移送司法机关','移送'], w:22, label:'移送司法' },
+  { kw:['涉嫌严重违纪违法'], w:18, label:'涉嫌严重违纪' },
+  { kw:['接受'], w:10, label:'接受调查' },
+  { kw:['免去','辞职'], w:8, label:'组织处理' }
+];
+
+function hit(list, text){ return list.filter(k => text.includes(k)); }
+
+/* 核心判定函数：返回每类的加权得分与证据 */
+function classifyText(text){
+  const rows = [];
+  RULES.forEach(r => {
+    const c = hit(r.core, text), s = hit(r.syn, text), a = hit(r.act, text);
+    if(!c.length && !s.length) return;
+    let score = 0;
+    score += c.length * 22;            // 核心词权重最高
+    score += Math.min(s.length,3) * 9; // 近义词辅助，防止堆砌刷分
+    score += Math.min(a.length,2) * 6; // 上下文行动词
+    score += r.base * 0.35;            // 类目基础分（保守）
+    rows.push({type:r.type, score:Math.round(score), sev:r.sev, core:c, syn:s, act:a});
+  });
+  rows.sort((x,y)=>y.score-x.score);
+  // 职务层级
+  let rank = {label:'未识别', w:0, kw:[]};
+  RANK.forEach(r=>{ const h=hit(r.kw,text); if(h.length && r.w>rank.w) rank={label:r.label,w:r.w,kw:h}; });
+  // 处置方式
+  let act = {label:'未识别', w:0};
+  ACTION.forEach(a=>{ const h=hit(a.kw,text); if(h.length && a.w>act.w) act={label:a.label,w:a.w,kw:h}; });
+  // 合成最终得分
+  rows.forEach(r=>{ r.final = r.score + rank.w + act.w; });
+  rows.sort((x,y)=>y.final-x.final);
+  return {rows, rank, act};
+}
+
+/* ---------- 1. 违规类型判定 UI ---------- */
+function classify(){
+  const text = document.getElementById('caseInput').value.trim();
+  const out  = document.getElementById('classifyOut');
+  if(!text){ out.innerHTML='<div class="result muted">请输入案件描述。</div>'; return; }
+  const {rows, rank, act} = classifyText(text);
+
+  let html = '<div class="result">';
+  html += `<div>输入文本：<span class="muted">${escapeHtml(text)}</span></div><hr style="border:none;border-top:1px solid var(--line);margin:10px 0">`;
+  html += `<div>识别职务层级：<b>${rank.label}</b> <span class="pill">+${rank.w} 分</span>`;
+  html += rank.kw && rank.kw.length ? ` <span class="tagline kw">命中：${rank.kw.join(' / ')}</span>` : '';
+  html += `</div>`;
+  html += `<div>识别处置方式：<b>${act.label}</b> <span class="pill">+${act.w} 分</span>`;
+  html += act.kw && act.kw.length ? ` <span class="tagline kw">命中：${act.kw.join(' / ')}</span>` : '';
+  html += `</div>`;
+
+  if(!rows.length){
+    html += `<hr style="border:none;border-top:1px solid var(--line);margin:10px 0">
+             <div class="muted">未命中任何规则，判定为「其他」。可考虑扩充 SupervisionItem 三层关键词表。</div>`;
+  } else {
+    html += '<hr style="border:none;border-top:1px solid var(--line);margin:10px 0">';
+    html += '<table><tr><th>候选类型</th><th>规则分</th><th>职务加成</th><th>处置加成</th><th>最终得分</th><th>命中证据</th></tr>';
+    rows.forEach((r,i)=>{
+      const ev = [...r.core.slice(0,2).map(k=>`${k}(核心)`),
+                  ...r.syn.slice(0,2).map(k=>`${k}(近义)`),
+                  ...r.act.slice(0,1).map(k=>`${k}(上下文)`)].map(tag=>`<span class="tagline kw">${escapeHtml(tag)}</span>`).join('');
+      html += `<tr${i===0?' style="background:#eff6ff"':''}>
+        <td><b>${r.type}</b>${i===0?' <span class="pill">判定结果</span>':''}</td>
+        <td>${r.score}</td><td>+${rank.w}</td><td>+${act.w}</td>
+        <td><b>${r.final}</b></td><td>${ev||'<span class="muted">—</span>'}</td></tr>`;
+    });
+    html += '</table>';
+    html += `<div style="margin-top:10px" class="muted">共 ${rows.length} 个候选类型参与竞争，取加权总分最高者。全过程可解释、可复核。</div>`;
+  }
+  html += '</div>';
+  out.innerHTML = html;
+}
+function randomCase(){
+  const valid = DATA.filter(d=>d.title && d.title !== '【姓名脱敏】');
+  if(!valid.length) return;
+  const r = valid[Math.floor(Math.random()*valid.length)];
+  document.getElementById('caseInput').value = r.title;
+  classify();
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- 预处理：给每条数据补算出主类型 ---------- */
+const ENRICHED = DATA.map(d=>{
+  const t = d.title || '';
+  const r = classifyText(t);
+  const top = r.rows[0];
+  return {...d, _auto: top?top.type:'其他', _sev: top?top.sev:1,
+          _year: (d.date && d.date!=='None') ? parseInt(d.date.slice(0,4),10) : null};
+});
+
+/* ---------- 2. 地区风险热度 ---------- */
+function buildHeat(){
+  const map = {};
+  ENRICHED.forEach(d=>{
+    const k = d.region || '未知';
+    map[k] = map[k] || {n:0, sevSum:0, recent:0};
+    map[k].n++; map[k].sevSum += d._sev;
+    if(d._year && d._year >= 2024) map[k].recent++;
+  });
+  const arr = Object.entries(map).map(([k,v])=>({
+    region:k, n:v.n, sev:+(v.sevSum/v.n).toFixed(2), recent:v.recent,
+    raw: v.n*0.5 + (v.sevSum/v.n)*0.3*10 + v.recent*0.2*3
+  })).sort((a,b)=>b.raw-a.raw);
+  const max = Math.max(...arr.map(a=>a.raw)) || 1;
+  arr.forEach(a=> a.heat = Math.round(a.raw/max*100));
+
+  let h = '<table><tr><th>地市</th><th>案件数</th><th>平均严重度</th><th>近年活跃</th><th>热度</th></tr>';
+  arr.forEach(a=>{
+    h += `<tr><td><b>${escapeHtml(a.region)}</b></td><td>${a.n}</td><td>${a.sev}</td><td>${a.recent}</td>
+      <td><span class="bar" style="width:${Math.max(a.heat,4)}px;background:${a.heat>66?'#dc2626':a.heat>33?'#d97706':'#16a34a'}"></span> ${a.heat}</td></tr>`;
+  });
+  document.getElementById('heatTable').innerHTML = h + '</table>';
+
+  // 纯 SVG 条形图（自绘，不引第三方库）
+  const W=380, rowH=26, H=arr.length*rowH+10, labelW=64;
+  let svg = `<svg width="100%" viewBox="0 0 ${W} ${H}">`;
+  svg += `<text x="0" y="12" style="font-weight:700">地市案件分布（自绘条形图）</text>`;
+  const mx = Math.max(...arr.map(a=>a.n)) || 1;
+  arr.forEach((a,i)=>{
+    const y = 26 + i*rowH, w = Math.max(2, (a.n/mx)*(W-labelW-40));
+    svg += `<text x="0" y="${y+11}">${escapeHtml(a.region)}</text>`;
+    svg += `<rect x="${labelW}" y="${y}" width="${w}" height="13" rx="3" fill="#2563eb" opacity="${0.45+0.55*a.n/mx}"/>`;
+    svg += `<text x="${labelW+w+6}" y="${y+11}">${a.n}</text>`;
+  });
+  document.getElementById('heatChart').innerHTML = svg + '</svg>';
+}
+
+/* ---------- 3. 自然语言查询 ---------- */
+const chatEl = () => document.getElementById('chat');
+function push(role, text){
+  const box = chatEl();
+  const d = document.createElement('div');
+  d.className = 'msg ' + (role==='me'?'me':'ai');
+  d.innerHTML = escapeHtml(text).replace(/\n/g,'<br>');
+  box.appendChild(d); box.scrollTop = box.scrollHeight;
+}
+function clearChat(){ chatEl().innerHTML=''; }
+
+function answer(q){
+  const n = ENRICHED.length;
+  const has = (...ks)=>ks.some(k=>q.includes(k));
+  const yearM = q.match(/(20\d{2})\s*年?/);
+  const typeHit = RULES.map(r=>r.type).filter(t=>q.includes(t));
+  const regionHit = [...new Set(ENRICHED.map(d=>d.region))].filter(r=>r && q.includes(r.replace(/市$/,'')));
+
+  if(has('预测','明年','未来','趋势','预估')){
+    const f = forecast();
+    return `基于线性回归外推：预测下一年度约 ${f.next} 起（历史 ${f.years[0]}–${f.years[f.years.length-1]}，年均 ${f.avg} 起，斜率 ${f.slope}/年）。\n注意：样本量较小，预测仅作趋势参考。`;
+  }
+  if(has('最多','最高','排名','哪个','哪个地区','排第')){
+    const top = topRegion();
+    return `案件最多的地市是「${top.region}」，共 ${top.n} 起，占总量 ${(top.n/n*100).toFixed(1)}%。\n其后为：${top.rest}。`;
+  }
+  if(typeHit.length){
+    const t = typeHit[0];
+    const c = ENRICHED.filter(d=>d._auto===t).length;
+    return `判定为「${t}」的案件共 ${c} 起，占比 ${(c/n*100).toFixed(1)}%。`;
+  }
+  if(regionHit.length){
+    const rg = regionHit[0];
+    const sub = ENRICHED.filter(d=>(d.region||'').replace(/市$/,'').includes(rg.replace(/市$/,'')));
+    return `「${rg}」相关案件共 ${sub.length} 起。最近一条：${sub[0]?sub[0].title.slice(0,40):'—'}`;
+  }
+  if(yearM){
+    const y = parseInt(yearM[1],10);
+    const c = ENRICHED.filter(d=>d._year===y).length;
+    return `${y} 年共 ${c} 起案件${c?`。（另有 ${ENRICHED.filter(d=>!d._year).length} 条日期解析失败，未计入时间统计）`:'，或该年度无记录。'}`;
+  }
+  if(has('多少','几起','总数','数量')){
+    return `当前数据集共 ${n} 起案件，覆盖 ${new Set(ENRICHED.map(d=>d.region)).size} 个地市，\n自动判定出的主类型共 ${new Set(ENRICHED.map(d=>d._auto)).size} 类。`;
+  }
+  return `已识别的理解：暂无匹配意图。可试试「哪个地区最多」「2025年有多少起」「执纪审查多少」「预测明年趋势」。\n当前数据集共 ${n} 起。`;
+}
+function topRegion(){
+  const m={}; ENRICHED.forEach(d=>{ m[d.region||'未知']=(m[d.region||'未知']||0)+1; });
+  const arr=Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  return {region:arr[0][0], n:arr[0][1], rest:arr.slice(1,4).map(x=>`${x[0]} ${x[1]} 起`).join('、')};
+}
+function ask(){
+  const i = document.getElementById('qInput');
+  const q = i.value.trim(); if(!q) return;
+  push('me', q); i.value='';
+  setTimeout(()=>push('ai', answer(q)), 120);
+}
+
+/* ---------- 4. 趋势与线性回归预测 ---------- */
+function series(){
+  const m={}; ENRICHED.forEach(d=>{ if(d._year) m[d._year]=(m[d._year]||0)+1; });
+  const ys = Object.keys(m).map(Number).sort((a,b)=>a-b);
+  return {years:ys, vals:ys.map(y=>m[y])};
+}
+function forecast(){
+  const {years, vals} = series();
+  const n = years.length;
+  if(n < 2) return {years, vals, slope:0, avg:0, next:vals[0]||0};
+  const mx = years.reduce((a,b)=>a+b,0)/n, my = vals.reduce((a,b)=>a+b,0)/n;
+  let num=0, den=0;
+  for(let i=0;i<n;i++){ num += (years[i]-mx)*(vals[i]-my); den += (years[i]-mx)**2; }
+  const slope = den? num/den : 0;
+  const intercept = my - slope*mx;
+  const next = Math.max(0, Math.round(slope*(years[n-1]+1) + intercept));
+  return {years, vals, slope:slope.toFixed(2), avg:my.toFixed(1), next};
+}
+function buildTrend(){
+  const {years, vals} = series();
+  const f = forecast();
+  const W=1000,H=240,pad=44;
+  const maxV = Math.max(...vals, f.next, 1);
+  const x = i => pad + i*(W-pad*2)/Math.max(1,(vals.length));
+  const yscale = v => H-pad - (v/maxV)*(H-pad*2);
+  let svg = `<svg width="100%" viewBox="0 0 ${W} ${H}">`;
+  // 网格
+  for(let g=0; g<=4; g++){
+    const yy = pad + g*(H-pad*2)/4;
+    svg += `<line x1="${pad}" y1="${yy}" x2="${W-pad}" y2="${yy}" stroke="#e5e7eb"/>`;
+    svg += `<text x="6" y="${yy+4}">${Math.round(maxV*(1-g/4))}</text>`;
+  }
+  // 实际折线
+  let pts = vals.map((v,i)=>`${x(i)},${yscale(v)}`).join(' ');
+  svg += `<polyline points="${pts}" fill="none" stroke="#2563eb" stroke-width="2.5"/>`;
+  vals.forEach((v,i)=>{ svg += `<circle cx="${x(i)}" cy="${yscale(v)}" r="4" fill="#2563eb"/>`;
+                        svg += `<text x="${x(i)-12}" y="${yscale(v)-9}">${v}</text>`; });
+  // 预测点（虚线延伸）
+  const nx = x(vals.length-1) + (W-pad*2)/Math.max(1,(vals.length));
+  if(nx < W-pad){
+    const lastVal = vals[vals.length-1]||0;
+    svg += `<line x1="${x(vals.length-1)}" y1="${yscale(lastVal)}" x2="${nx}" y2="${yscale(f.next)}" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,4"/>`;
+    svg += `<circle cx="${nx}" cy="${yscale(f.next)}" r="5" fill="#dc2626"/>`;
+    svg += `<text x="${nx-24}" y="${yscale(f.next)-10}" style="fill:#dc2626;font-weight:700">预测 ${f.next}</text>`;
+    svg += `<text x="${nx-30}" y="${H-8}" style="fill:#dc2626">${years[years.length-1]+1}</text>`;
+  }
+  years.forEach((y,i)=>{ svg += `<text x="${x(i)-12}" y="${H-8}">${y}</text>`; });
+  document.getElementById('trendChart').innerHTML = svg + '</svg>';
+  document.getElementById('trendText').innerHTML =
+    `历史区间 ${years[0]}–${years[years.length-1]}，年均 ${f.avg} 起，回归斜率 ${f.slope} 起/年。` +
+    ` 注：${ENRICHED.filter(d=>!d._year).length} 条记录日期解析失败未入序列（已知缺陷，修复中）。`;
+}
+
+/* ---------- 初始化 ---------- */
+(function init(){
+  if(!DATA.length){
+    document.querySelector('.wrap').innerHTML +=
+      '<section><h2>数据未加载</h2><div class="desc">请确认 data/cases.js 与本页面在同一目录层级。</div></section>';
+    return;
+  }
+  const valid = ENRICHED.filter(d=>d._year);
+  const yearsSet = new Set(ENRICHED.map(d=>d._auto));
+  const regions = new Set(ENRICHED.map(d=>d.region).filter(Boolean));
+  document.getElementById('total').textContent = DATA.length;
+  document.getElementById('c1').textContent = DATA.length;
+  document.getElementById('c2').textContent = regions.size;
+  document.getElementById('c3').textContent = yearsSet.size;
+  const ys = valid.map(d=>d._year).sort();
+  document.getElementById('c4').textContent = ys.length ? (ys[0]+'–'+ys[ys.length-1]) : '—';
+  const tagged = DATA.filter(d=>(d.tags||'').trim()).length;
+  document.getElementById('c5').textContent = Math.round(tagged/DATA.length*100)+'%';
+
+  buildHeat(); buildTrend(); classify();
+  push('ai','你好，我是本地数据分析助手。所有计算均在本机完成，无需联网。可以问我：哪个地区最多 / 2025年有多少起 / 执纪审查多少 / 预测明年趋势。');
+})();
+</script>
+</body>
+</html>

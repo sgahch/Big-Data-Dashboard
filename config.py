@@ -1,21 +1,62 @@
 # -*- coding: utf-8 -*-
 """
-配置文件
+配置文件 - 自动环境检测
 """
 
 import os
+import socket
+
+# ========== 环境检测 ==========
+def is_production():
+    """检测是否为生产环境"""
+    # 方法1: 检查环境变量
+    if os.getenv('ENV') == 'production':
+        return True
+
+    # 方法2: 检查主机名（云服务器通常有特定主机名）
+    hostname = socket.gethostname().lower()
+    if any(keyword in hostname for keyword in ['server', 'cloud', 'aliyun', 'tencent', 'huawei']):
+        return True
+
+    # 方法3: 检查是否存在生产环境标识文件
+    if os.path.exists('/etc/production') or os.path.exists('.production'):
+        return True
+
+    # 方法4: 检查IP地址（本地开发通常是127.0.0.1或192.168.x.x）
+    try:
+        hostname_ip = socket.gethostbyname(socket.gethostname())
+        if not (hostname_ip.startswith('127.') or hostname_ip.startswith('192.168.')):
+            return True
+    except:
+        pass
+
+    return False
+
+ENV = 'production' if is_production() else 'development'
+IS_PROD = ENV == 'production'
+
+print(f"🌍 当前环境: {ENV}")
 
 # ========== 数据库配置 ==========
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', '127.0.0.1'),
-    'port': int(os.getenv('DB_PORT', 3306)),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', '20060424007Hq265'),
-    'database': os.getenv('DB_NAME', 'supervision'),
-    'charset': 'utf8mb4',
-    'pool_size': 10,
-    'pool_recycle': 3600
-}
+if IS_PROD:
+    # 生产环境使用MySQL
+    DB_CONFIG = {
+        'type': 'mysql',
+        'host': os.getenv('DB_HOST', '127.0.0.1'),
+        'port': int(os.getenv('DB_PORT', 3306)),
+        'user': os.getenv('DB_USER', 'root'),
+        'password': os.getenv('DB_PASSWORD', '20060424007Hq265'),
+        'database': os.getenv('DB_NAME', 'supervision'),
+        'charset': 'utf8mb4',
+        'pool_size': 10,
+        'pool_recycle': 3600
+    }
+else:
+    # 开发环境使用SQLite
+    DB_CONFIG = {
+        'type': 'sqlite',
+        'database': 'crawler.db'
+    }
 
 # ========== Redis配置（可选，用于缓存） ==========
 REDIS_CONFIG = {

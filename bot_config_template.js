@@ -17,8 +17,10 @@ const BOT_CONFIGS = {
      * 适用场景：通用对话、轻松交流
      */
     'wechat_chat': {
-        bot_id: '7584642107525824539',
-        api_key: 'pat_3Zzgz9YMw6iuT5HlPK3SOsWkgLf4ANq0d68XmBrSQ3SeDd3dmsKU2yhqDwRBj7fz',
+        // 2026-09-29 更新：https://www.coze.cn/space/7548384255068930098/bot/7584448825868189732
+        // api_key 已于 2026-09-29 更新为新空间 API Key（验证通过）
+        bot_id: '7584448825868189732',
+        api_key: 'cztei_lPLQzTuzVnOI3wH5FTgin2cwFo8rhe6bWZQg47rDRXtXyIn9uUEgI8DWAglqfHQEb',
         name: '微信聊天机器人',
         description: '和微信朋友轻松聊天',
         welcome_message: '嗨！我来陪你聊天啦，以后咱们可以畅聊各种话题😃。',

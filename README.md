@@ -147,7 +147,8 @@
 │   ├── 功能清单.md           # 功能说明文档
 │   ├── 开发阶段记录.md       # 开发历程记录
 │   └── 其他文档...
-├── .env                      # 环境变量配置
+├── config/                   # 配置文件目录（包含 .env 等敏感配置）
+│   └── .env                  # 环境变量配置（不提交到版本控制）
 ├── .env.example              # 环境变量示例
 ├── .gitignore                # Git 忽略配置
 ├── requirements.txt          # Python 依赖
@@ -237,7 +238,17 @@ FLUSH PRIVILEGES;
 
 ### 5. 配置环境变量
 
-复制 `.env.example` 为 `.env` 并修改：
+**安全提示：为保护敏感信息，请将环境变量文件放置在安全位置，不要提交到版本控制系统。**
+
+#### 推荐方式：使用 config 目录
+
+1. 创建 config 目录并复制配置文件：
+```bash
+mkdir config
+cp .env.example config/.env
+```
+
+2. 编辑 `config/.env` 文件，填入实际配置：
 
 ```env
 # 数据库配置
@@ -275,6 +286,16 @@ EMAIL_USE_TLS=True
 CRAWLER_USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 CRAWLER_DELAY=1  # 爬取延迟（秒）
 MAX_CRAWLER_THREADS=5  # 最大爬虫线程数
+```
+
+> **注意**：`.env` 文件已添加到 `.gitignore` 中，不会被提交到代码仓库，确保您的敏感信息得到保护。
+
+#### 兼容方式：根目录配置（不推荐）
+
+您也可以将 `.env` 文件放在项目根目录（但不推荐，因为存在意外提交的风险）：
+```bash
+cp .env.example .env
+# 编辑 .env 文件
 ```
 
 ### 6. 初始化项目

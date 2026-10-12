@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/', include('apps.crawler.urls')),
     path('api/', include('apps.stats.urls')),
     path('api/', include('apps.users.urls')),
+    path('api/', include('apps.ai_chat.urls')),
     # 前端页面
     re_path(r'^$', lambda request: serve(request, 'index.html', document_root=BASE_DIR)),
     re_path(r'^(?!api/)(?!admin/)(?!static/)(?P<path>.*)$',

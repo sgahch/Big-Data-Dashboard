@@ -6,8 +6,21 @@ import pymysql
 import os
 from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv('.env.development')
+# 加载环境变量，优先从 config 目录加载
+import os
+from pathlib import Path
+
+# 获取项目根目录
+project_root = Path(__file__).parent
+env_path = project_root / 'config' / '.env'
+
+if not env_path.exists():
+    # 如果 config 目录中没有 .env，则尝试从项目根目录加载（向后兼容）
+    env_path = project_root / '.env.development'
+    if not env_path.exists():
+        env_path = project_root / '.env'
+
+load_dotenv(env_path)
 
 # 从环境变量获取数据库配置
 db_config = {

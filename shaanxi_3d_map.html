@@ -1,51 +1,134 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
-    <title>陕西省数字孪生 - 红色高度修正终极版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>陕西省数字孪生地图</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
     <style>
-        body {
+        :root {
+            --google-blue: #1a73e8;
+            --text-main: #202124;
+        }
+
+        body,
+        html {
             margin: 0;
-            background: #000;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
             overflow: hidden;
-            font-family: 'PingFang SC', sans-serif;
+            font-family: "Segoe UI", sans-serif;
         }
 
         #main-canvas {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
         }
 
-        .header {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            height: 60px;
-            background: linear-gradient(to bottom, rgba(200, 0, 0, 0.4), transparent);
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: transparent;
+            z-index: 1000;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10;
+            font-size: 15px;
+            color: #525252;
         }
 
-        .header h1 {
-            color: #ff4d4d;
-            font-size: 24px;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px #ff0000;
-            margin: 0;
+        /* 悬停数据窗口 */
+        .region-tooltip {
+            position: fixed;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 0;
+            padding: 15px;
+            min-width: 220px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            pointer-events: none;
+            z-index: 9999;
+            display: none;
+            font-size: 13px;
+        }
+
+        .region-tooltip::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #0f62fe;
+        }
+
+        .region-tooltip-title {
+            color: #161616;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .region-tooltip-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .region-tooltip-item:last-child {
+            border-bottom: none;
+        }
+
+        .region-tooltip-label {
+            color: #525252;
+            font-size: 12px;
+        }
+
+        .region-tooltip-value {
+            color: #0f62fe;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .region-tooltip-sources {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .region-tooltip-source-title {
+            color: #525252;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+
+        .region-tooltip-source-item {
+            color: #6929c4;
+            font-size: 11px;
+            padding: 2px 0;
+            padding-left: 10px;
+            position: relative;
+        }
+
+        .region-tooltip-source-item::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #0f62fe;
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <h1>陕西省全域数据链路监测 (高度修正版)</h1>
-    </div>
+    <div class="loading" id="loader">加载陕西省数字地图...</div>
     <div id="main-canvas"></div>
+    <div class="region-tooltip" id="regionTooltip"></div>
 
     <script>
         const chart = echarts.init(document.getElementById('main-canvas'));
@@ -58,109 +141,260 @@
             '安康': [109.0291, 32.6853], '商洛': [109.9404, 33.8703]
         };
 
-        // --- 核心配置区 ---
-        const BASE_H = 1.5; // 关中、陕南基础厚度
-        const HIGH_H = 4.0; // 延安、榆林拉伸厚度
-        const HIGH_CITIES = ['延安', '榆林'];
+        const qingfengLinks = {
+            '西安': 'https://www.qinfeng.gov.cn/jdpg1/xa.htm',
+            '宝鸡': 'https://www.qinfeng.gov.cn/jdpg1/bj.htm',
+            '咸阳': 'https://www.qinfeng.gov.cn/jdpg1/xy.htm',
+            '渭南': 'https://www.qinfeng.gov.cn/jdpg1/wn.htm',
+            '铜川': 'https://www.qinfeng.gov.cn/jdpg1/tc.htm',
+            '延安': 'https://www.qinfeng.gov.cn/jdpg1/ya.htm',
+            '榆林': 'https://www.qinfeng.gov.cn/jdpg1/yl.htm',
+            '汉中': 'https://www.qinfeng.gov.cn/jdpg1/hz.htm',
+            '安康': 'https://www.qinfeng.gov.cn/jdpg1/ak.htm',
+            '商洛': 'https://www.qinfeng.gov.cn/jdpg1/sl.htm'
+        };
 
-        // 这里的 Z 值获取需要非常小心，有些版本 GL 的 Z 轴是从 region 底部起算的
-        function getCityZ(cityName) {
-            const isHigh = HIGH_CITIES.some(name => cityName.includes(name));
-            // 修正逻辑：如果依然悬空，试着将 0.1 调小甚至改为 0
-            return isHigh ? HIGH_H : BASE_H;
-        }
+        // 模拟各地区数据（实际应从API获取）
+        const regionData = {
+            '西安': { newsCount: 186, sources: ['清风网', '中央纪委国家监委网站', '陕西省纪委监委', '西安市纪委监委'] },
+            '宝鸡': { newsCount: 153, sources: ['清风网', '中央纪委国家监委网站', '陕西省纪委监委'] },
+            '咸阳': { newsCount: 142, sources: ['清风网', '中央纪委国家监委网站', '陕西省纪委监委'] },
+            '渭南': { newsCount: 131, sources: ['清风网', '中央纪委国家监委网站'] },
+            '铜川': { newsCount: 86, sources: ['清风网', '陕西省纪委监委'] },
+            '延安': { newsCount: 118, sources: ['清风网', '中央纪委国家监委网站', '陕西省纪委监委'] },
+            '榆林': { newsCount: 126, sources: ['清风网', '中央纪委国家监委网站'] },
+            '汉中': { newsCount: 104, sources: ['清风网', '陕西省纪委监委'] },
+            '安康': { newsCount: 98, sources: ['清风网', '陕西省纪委监委'] },
+            '商洛': { newsCount: 79, sources: ['清风网', '陕西省纪委监委'] }
+        };
+
+        // 新闻源配置
+        const newsSources = {
+            '清风网': 'https://www.qinfeng.gov.cn/',
+            '中央纪委国家监委网站': 'https://www.ccdi.gov.cn/',
+            '陕西省纪委监委': 'http://www.sxdi.gov.cn/',
+            '西安市纪委监委': 'http://www.xajw.gov.cn/',
+            '人民网-反腐倡廉': 'http://fanfu.people.com.cn/',
+            '新华网-反腐': 'http://www.xinhuanet.com/politics/fan/'
+        };
 
         const mapUrl = 'https://geo.datav.aliyun.com/areas_v3/bound/610000_full.json';
+        const BASE_FLY_HEIGHT = 15;
 
         async function init() {
             const res = await fetch(mapUrl);
             const geoJson = await res.json();
-            echarts.registerMap('sx_red_final', geoJson);
-
-            const cityNames = Object.keys(coords);
-            const allLines = [];
-            for (let i = 0; i < 40; i++) {
-                const s = cityNames[Math.floor(Math.random() * 10)];
-                const e = cityNames[Math.floor(Math.random() * 10)];
-                if (s === e) continue;
-
-                allLines.push({
-                    coords: [
-                        [coords[s][0], coords[s][1], getCityZ(s)],
-                        [coords[e][0], coords[e][1], getCityZ(e)]
-                    ]
-                });
-            }
+            document.getElementById('loader').style.display = 'none';
+            echarts.registerMap('shaanxi', geoJson);
 
             const option = {
-                backgroundColor: '#050000',
+                backgroundColor: 'transparent',
                 geo3D: {
-                    map: 'sx_red_final',
-                    shading: 'realistic',
-                    boxHeight: 10, // 限制容器总高度，防止 Z 轴拉伸比例失真
-                    regionHeight: BASE_H,
-
-                    regions: geoJson.features.map(f => {
-                        const name = f.properties.name;
-                        const isHigh = HIGH_CITIES.some(k => name.includes(k));
-                        return {
-                            name: name,
-                            height: isHigh ? HIGH_H : BASE_H,
-                            itemStyle: { color: isHigh ? '#4a0000' : '#2a0000' }
-                        };
-                    }),
-
-                    itemStyle: { borderColor: '#ff3333', borderWidth: 1 },
-                    postEffect: { enable: true, bloom: { enable: true, bloomIntensity: 0.2 } },
-                    viewControl: {
-                        alpha: 40,
-                        beta: 15,
-                        distance: 100,
-                        autoRotate: true
+                    map: 'shaanxi', roam: true, silent: false,
+                    boxHeight: 6, regionHeight: 2.5,
+                    itemStyle: { color: '#1a5ab8', opacity: 1, borderWidth: 1.5, borderColor: '#78a9ff' },
+                    emphasis: {
+                        itemStyle: { color: '#ffffff', opacity: 0.95 },
+                        label: { show: true, textStyle: { color: '#0b0f2a', fontSize: 16, fontWeight: 'bold' } }
                     },
-                    light: {
-                        main: { intensity: 2, shadow: true, alpha: 55 },
-                        ambient: { intensity: 0.3 }
-                    }
+                    shading: 'lambert', postEffect: { enable: false },
+                    viewControl: {
+                        distance: 90, alpha: 40, beta: 10,
+                        autoRotate: true, autoRotateSpeed: 1.5, panMouseButton: 'right'
+                    },
+                    light: { main: { intensity: 1.5, shadow: true, alpha: 50 }, ambient: { intensity: 0.6 } },
+                    regions: geoJson.features.map(f => {
+                        const n = f.properties.name;
+                        let h = 1.0, c = '#1565C0';
+                        if (['榆林市', '延安市'].includes(n)) { h = 4.0; c = '#0D47A1'; }
+                        else if (['汉中市', '安康市', '商洛市'].includes(n)) { h = 3.5; c = '#1258a8'; }
+                        else if (['西安市'].includes(n)) { h = 3.0; c = '#1976D2'; }
+                        return { name: n, height: h, itemStyle: { color: c } };
+                    })
                 },
                 series: [
-                    {
-                        type: 'lines3D',
-                        coordinateSystem: 'geo3D',
-                        effect: { show: true, period: 3, trailLength: 0.3, trailColor: '#ffdd00', trailWidth: 3 },
-                        lineStyle: { color: '#ff0000', width: 1.5, opacity: 0.2, curviness: 0.3 },
-                        data: allLines
-                    },
+                    // ==========================================
+                    // 黑科技：第一层（隐形的巨大热区，负责捕捉点击）
+                    // ==========================================
                     {
                         type: 'scatter3D',
                         coordinateSystem: 'geo3D',
-                        symbolSize: 8,
-                        itemStyle: { color: '#ffdd00', opacity: 1 },
+                        symbol: 'circle',
+                        symbolSize: 200, // ★ 超大的触发区域（覆盖整个市的范围）
+                        itemStyle: {
+                            color: '#ffffff',
+                            opacity: 0.001 // ★ 几乎完全透明，肉眼看不见，但引擎可以捕捉
+                        },
+                        label: { show: false },
+                        silent: false, // 确保可以响应事件
+                        data: Object.entries(coords).map(([name, coord]) => ({
+                            name,
+                            // 高度设为 3，刚好悬浮在3D地图板块的上方，防止被地图区块遮挡
+                            value: [...coord, 3]
+                        }))
+                    },
+                    // ==========================================
+                    // 第二层：可见的红针和文字标签（负责视觉展示）
+                    // ==========================================
+                    {
+                        type: 'scatter3D',
+                        coordinateSystem: 'geo3D',
+                        symbol: 'pin',
+                        symbolSize: 30,
+                        itemStyle: { color: '#0f62fe', opacity: 1 },
                         label: {
-                            show: true,
-                            position: 'top',
-                            formatter: '{b}',
-                            // 关键：为了不让标签飘太远，distance 设为 0
-                            distance: 0,
+                            show: true, position: 'top', formatter: '{b}',
                             textStyle: {
                                 color: '#fff', fontSize: 12, fontWeight: 'bold',
-                                textBorderColor: '#ff0000', textBorderWidth: 2,
-                                backgroundColor: 'transparent'
+                                backgroundColor: 'rgba(15, 98, 254, 0.88)', padding: [3, 6], borderRadius: 0,
+                                borderWidth: 0
                             }
                         },
-                        data: Object.entries(coords).map(([name, pos]) => ({
+                        data: Object.entries(coords).map(([name, coord]) => ({
                             name,
-                            value: [pos[0], pos[1], getCityZ(name)]
+                            value: [...coord, BASE_FLY_HEIGHT + 8]
                         }))
                     }
                 ]
             };
 
             chart.setOption(option);
+
+            // ==========================================
+            // 配合底层捕获逻辑，防止拖拽打断点击
+            // ==========================================
+            let activeRegion = '';
+            let mouseDownTime = 0;
+            const tooltip = document.getElementById('regionTooltip');
+
+            // 只要鼠标进入了隐形大圆盘的范围，就会记录城市名称并显示数据窗口
+            chart.on('mousemove', function (params) {
+                if (params.seriesType === 'scatter3D' && params.name) {
+                    activeRegion = params.name;
+                    document.body.style.cursor = 'pointer';
+                    console.log('鼠标移动到:', params.name);
+                    showRegionTooltip(params.name);
+                } else {
+                    // 如果鼠标在地图上但不在任何地区上，也隐藏tooltip
+                    if (activeRegion !== '') {
+                        activeRegion = '';
+                        document.body.style.cursor = 'default';
+                        hideRegionTooltip();
+                    }
+                }
+            });
+
+            chart.on('mouseout', function () {
+                activeRegion = '';
+                document.body.style.cursor = 'default';
+                hideRegionTooltip();
+                console.log('鼠标移出地图');
+            });
+
+            // 全局鼠标移动监听：更新tooltip位置 + 检测是否移出canvas区域
+            document.addEventListener('mousemove', function (e) {
+                const canvas = document.getElementById('main-canvas');
+                const rect = canvas.getBoundingClientRect();
+
+                // 检查鼠标是否在canvas区域外
+                const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
+                    e.clientY < rect.top || e.clientY > rect.bottom;
+
+                if (isOutside && tooltip && tooltip.style.display === 'block') {
+                    // 鼠标移出canvas区域，立即隐藏tooltip
+                    hideRegionTooltip();
+                    activeRegion = '';
+                    console.log('鼠标移出canvas区域');
+                } else if (tooltip && tooltip.style.display === 'block') {
+                    // 更新tooltip位置
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY + 15) + 'px';
+                }
+            });
+
+            // 使用 ZRender 拦截全局点击
+            chart.getZr().on('mousedown', function () {
+                mouseDownTime = Date.now();
+            });
+
+            chart.getZr().on('mouseup', function () {
+                let timeDiff = Date.now() - mouseDownTime;
+
+                // 时间差小于300ms(说明是点击而不是拖拽)，且当前鼠标正处于某个城市的隐形热区内
+                if (timeDiff < 300 && activeRegion !== '') {
+                    console.log('触发了大范围热区点击:', activeRegion);
+                    handleRegionClick(activeRegion);
+                }
+            });
+
+            window.addEventListener('resize', () => chart.resize());
+        }
+
+        // 显示地区数据窗口
+        function showRegionTooltip(regionName) {
+            const tooltip = document.getElementById('regionTooltip');
+            if (!tooltip) {
+                console.error('找不到tooltip元素');
+                return;
+            }
+
+            const data = regionData[regionName] || { newsCount: 0, sources: ['清风网'] };
+
+            let sourcesHtml = '';
+            data.sources.forEach(source => {
+                sourcesHtml += `<div class="region-tooltip-source-item">${source}</div>`;
+            });
+
+            tooltip.innerHTML = `
+                <div class="region-tooltip-title">${regionName}市</div>
+                <div class="region-tooltip-item">
+                    <span class="region-tooltip-label">新闻数量</span>
+                    <span class="region-tooltip-value">${data.newsCount} 条</span>
+                </div>
+                <div class="region-tooltip-item">
+                    <span class="region-tooltip-label">最后更新</span>
+                    <span class="region-tooltip-value">今天</span>
+                </div>
+                <div class="region-tooltip-sources">
+                    <div class="region-tooltip-source-title">数据来源：</div>
+                    ${sourcesHtml}
+                </div>
+            `;
+
+            tooltip.style.display = 'block';
+            console.log('Tooltip已显示:', regionName);
+        }
+
+        // 隐藏地区数据窗口
+        function hideRegionTooltip() {
+            const tooltip = document.getElementById('regionTooltip');
+            tooltip.style.display = 'none';
+        }
+
+        // 处理跳转（包含防弹窗拦截）
+        function handleRegionClick(regionName) {
+            let targetUrl = qingfengLinks[regionName];
+
+            if (!targetUrl) {
+                for (const [city, url] of Object.entries(qingfengLinks)) {
+                    if (regionName.includes(city) || city.includes(regionName)) {
+                        targetUrl = url;
+                        break;
+                    }
+                }
+            }
+
+            if (targetUrl) {
+                const link = document.createElement('a');
+                link.href = targetUrl;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         }
 
         init();
-        window.onresize = () => chart.resize();
     </script>
 </body>
 

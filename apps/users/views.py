@@ -317,7 +317,7 @@ import os
 import time as time_module
 
 # Coze API 配置（从环境变量读取）
-COZE_API_TOKEN = os.environ.get('COZE_API_TOKEN', 'cztei_qB2AFxhYWesY9WyV1VktPi6FRFNm5247CIm4yCrYz8203EeZ4vTVIqpmZo7R0789M')
+COZE_API_TOKEN = os.environ.get('COZE_API_TOKEN', 'pat_GFvRZZ9cCE6CkQufhLmS4vppOLv8424xJmv0MmdiSp3W1mJgkugaHyXtY8wdHyvc')
 COZE_BOT_ID = os.environ.get('COZE_BOT_ID', '7584448825868189732')
 
 # 尝试导入 Coze SDK
@@ -392,7 +392,12 @@ class AIChatView(APIView):
 
             # 使用官方 SDK 调用流式聊天
             ai_reply = ''
+            chat_failed = False
+            error_message = ''
+
             try:
+                logger.info(f"开始调用Coze流式API, bot_id={COZE_BOT_ID}, user_id={user_id}")
+
                 for event in coze.chat.stream(
                     bot_id=COZE_BOT_ID,
                     user_id=str(user_id),
@@ -400,17 +405,53 @@ class AIChatView(APIView):
                         Message.build_user_question_text(user_message),
                     ],
                 ):
+                    logger.debug(f"收到事件: {event.event}")
+
                     if event.event == ChatEventType.CONVERSATION_MESSAGE_DELTA:
                         content = event.message.content
                         if content:
                             ai_reply += content
+                            logger.debug(f"累积回复长度: {len(ai_reply)}")
 
-                    if event.event == ChatEventType.CONVERSATION_CHAT_COMPLETED:
+                    elif event.event == ChatEventType.CONVERSATION_CHAT_COMPLETED:
                         logger.info(f"AI客服回复完成, 共{len(ai_reply)}字符")
                         break
 
+                    elif event.event == ChatEventType.CONVERSATION_CHAT_FAILED:
+                        chat_failed = True
+                        last_error = event.chat.last_error if hasattr(event, 'chat') and hasattr(event.chat, 'last_error') else None
+
+                        if last_error:
+                            error_code = getattr(last_error, 'code', 0)
+                            error_msg = getattr(last_error, 'msg', '未知错误')
+                            error_message = f"code={error_code} msg='{error_msg}'"
+
+                            # 特殊处理配额不足的情况
+                            if error_code == 4028:
+                                error_message = "Coze账户配额不足，请等待配额刷新或升级到付费版本。"
+                        else:
+                            error_message = "对话失败: 未知错误"
+
+                        logger.error(f"对话失败: {error_message}")
+                        break
+
+                if chat_failed:
+                    # 根据错误类型返回友好的提示
+                    if "配额不足" in error_message or "4028" in error_message:
+                        friendly_message = "抱歉，AI服务的免费配额已用完。请稍后再试，或联系管理员升级服务。"
+                    else:
+                        friendly_message = f"抱歉，AI服务处理失败。{error_message}"
+
+                    return Response({
+                        'code': 0,  # 改为0，让前端正常显示
+                        'message': 'success',
+                        'data': {'reply': friendly_message}
+                    })
+
+                logger.info(f"流式API调用完成，回复内容: {ai_reply[:100]}...")
+
             except Exception as e:
-                logger.error(f"Coze SDK调用错误: {e}")
+                logger.error(f"Coze SDK调用错误: {e}", exc_info=True)
                 return Response({
                     'code': -1,
                     'message': str(e),
@@ -418,12 +459,14 @@ class AIChatView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             if ai_reply:
+                logger.info(f"准备返回AI回复，长度: {len(ai_reply)}")
                 return Response({
                     'code': 0,
                     'message': 'success',
                     'data': {'reply': ai_reply}
                 })
             else:
+                logger.warning("AI回复为空")
                 return Response({
                     'code': -1,
                     'message': '未获取到AI回复',
@@ -431,7 +474,7 @@ class AIChatView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception as e:
-            logger.error(f"AI客服异常: {e}")
+            logger.error(f"AI客服异常: {e}", exc_info=True)
             return Response({
                 'code': -1,
                 'message': str(e),

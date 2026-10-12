@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案 C · 现代 SaaS（Stripe 风）— 纪检监察大数据可视化平台</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ 设计 Token（源自 Stripe 设计系统） ============ */
+  :root{
+    --canvas:#ffffff;
+    --canvas-soft:#f6f9fc;
+    --hairline:#e3e8ee;
+    --ink:#0d253d;
+    --ink-secondary:#273951;
+    --ink-mute:#64748d;
+    --primary:#533afd;
+    --primary-press:#2e2b8c;
+    --navy:#1c1e54;
+    --shadow-1:rgba(0,55,112,.08) 0 1px 3px;
+    --shadow-2:rgba(0,55,112,.08) 0 8px 24px, rgba(0,55,112,.04) 0 2px 6px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:'Inter','Noto Sans SC','Microsoft YaHei',sans-serif;
+    background:var(--canvas-soft);
+    color:var(--ink);
+    overflow:hidden;height:100vh;
+    font-feature-settings:"ss01","tnum";
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* 顶栏：白底浮在渐变 mesh 上 */
+  .header-wrap{
+    position:fixed;top:0;left:0;width:100%;z-index:1000;
+    background:linear-gradient(105deg,#f5e9d4 0%,#e8e2f7 28%,#cdd3fb 55%,#f3d3e8 80%,#f9e0d0 100%);
+    padding-bottom:14px;
+  }
+  .header{
+    height:60px;background:var(--canvas);
+    box-shadow:var(--shadow-1);
+    display:flex;align-items:center;gap:20px;padding:0 24px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:30px;height:30px;border-radius:8px;background:var(--navy);
+    color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;
+  }
+  .brand-name{font-size:17px;font-weight:600;letter-spacing:-0.3px;color:var(--ink);}
+  .nav-bar{display:flex;gap:4px;margin-left:12px;}
+  .nav-item{
+    padding:6px 14px;font-size:14px;font-weight:500;color:var(--ink-mute);
+    border-radius:9999px;cursor:pointer;transition:all .15s ease;
+  }
+  .nav-item:hover{color:var(--ink);background:var(--canvas-soft);}
+  .nav-item.active{color:#fff;background:var(--ink);}
+  .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .user-chip{font-size:13px;color:var(--ink-mute);display:flex;align-items:center;gap:6px;}
+  .user-chip i{color:var(--primary);}
+  .logout-btn{
+    padding:7px 16px;font-size:14px;font-weight:500;cursor:pointer;
+    background:var(--primary);color:#fff;border:none;border-radius:9999px;
+    font-family:inherit;transition:all .15s ease;
+    display:flex;align-items:center;gap:6px;
+  }
+  .logout-btn:hover{background:var(--primary-press);}
+
+  /* 页面小标题条（在 mesh 上） */
+  .page-eyebrow{
+    display:flex;justify-content:center;padding-top:10px;
+    font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--navy);
+    text-transform:uppercase;opacity:.75;
+  }
+
+  /* 主区卡片 */
+  .board{
+    display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);
+    gap:16px;padding:104px 20px 16px;height:100vh;
+  }
+  .panel{
+    background:var(--canvas);
+    border:1px solid var(--hairline);
+    border-radius:12px;
+    box-shadow:var(--shadow-1);
+    padding:16px 18px;display:flex;flex-direction:column;overflow:hidden;
+    transition:all .2s ease;
+  }
+  .panel:hover{box-shadow:var(--shadow-2);transform:translateY(-2px);}
+  .panel-title{
+    font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-0.2px;
+    display:flex;align-items:center;gap:8px;
+    padding-bottom:10px;margin-bottom:8px;border-bottom:1px solid var(--hairline);
+    flex-shrink:0;
+  }
+  .panel-title i{font-size:13px;color:var(--primary);}
+  .panel-title .tag{
+    margin-left:auto;font-size:10px;font-weight:600;letter-spacing:0.5px;
+    color:var(--primary);background:#eeedfe;
+    padding:3px 8px;border-radius:9999px;text-transform:uppercase;
+  }
+  .chart{flex:1;min-height:0;}
+</style>
+</head>
+<body>
+
+<div class="header-wrap">
+  <div class="header">
+    <div class="brand">
+      <div class="brand-mark"><i class="fas fa-shield-halved"></i></div>
+      <div class="brand-name">纪检监察大数据可视化平台</div>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-item">数据采集</div>
+      <div class="nav-item">数据处理</div>
+      <div class="nav-item active">数据呈现</div>
+      <div class="nav-item">数据评估</div>
+    </div>
+    <div class="header-right">
+      <div class="user-chip"><i class="fas fa-circle-user"></i>访客</div>
+      <button class="logout-btn"><i class="fas fa-arrow-right-from-bracket"></i>登出</button>
+    </div>
+  </div>
+  <div class="page-eyebrow">Data Presentation · 数据呈现</div>
+</div>
+
+<div class="board">
+  <div class="panel"><div class="panel-title"><i class="fas fa-chart-column"></i>案件查处呈现统计<span class="tag">Monthly</span></div><div class="chart" id="c1"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-chart-pie"></i>违规事项分布呈现</div><div class="chart" id="c2"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-city"></i>地区案件排名 TOP10</div><div class="chart" id="c3"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-tags"></i>热点关键词分析</div><div class="chart" id="c4"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-sitemap"></i>数据来源构成分析</div><div class="chart" id="c5"></div></div>
+  <div class="panel"><div class="panel-title"><i class="fas fa-radar-chart"></i>风险维度综合雷达</div><div class="chart" id="c6"></div></div>
+</div>
+
+<script>
+/* Stripe 图表主题：indigo + navy + ruby/magenta 点缀 */
+var T = {
+  text:'#64748d', line:'#e3e8ee', split:'#eef2f7',
+  palette:['#533afd','#1c1e54','#ea2261','#665efd','#f96bee','#0d9488','#9b6829','#a8c3de']
+};
+var base = { textStyle:{color:T.text,fontSize:11,fontFamily:'Inter,Noto Sans SC,Microsoft YaHei,sans-serif'}, color:T.palette };
+function mk(id,opt){ var c=echarts.init(document.getElementById(id)); c.setOption(Object.assign({},base,opt)); window.addEventListener('resize',function(){c.resize();}); }
+var axisCommon = {
+  axisLine:{lineStyle:{color:T.line}}, axisTick:{show:false},
+  axisLabel:{color:T.text,fontSize:10}, splitLine:{lineStyle:{color:T.split}}
+};
+
+mk('c1',{
+  grid:{left:36,right:12,top:24,bottom:24},
+  tooltip:{trigger:'axis'},
+  xAxis:Object.assign({type:'category',data:['1月','2月','3月','4月','5月','6月','7月','8月']},axisCommon),
+  yAxis:Object.assign({type:'value'},axisCommon),
+  series:[{type:'bar',data:[42,38,55,47,63,58,71,66],barWidth:'46%',
+    itemStyle:{color:'#533afd',borderRadius:[4,4,0,0]},
+    emphasis:{itemStyle:{color:'#665efd'}}}]
+});
+
+mk('c2',{
+  tooltip:{trigger:'item'},
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:10,itemHeight:10,icon:'circle'},
+  series:[{type:'pie',radius:['42%','68%'],center:['50%','44%'],
+    label:{color:T.text,fontSize:10},
+    labelLine:{lineStyle:{color:'#c8d3e0'}},
+    itemStyle:{borderColor:'#ffffff',borderWidth:2},
+    data:[
+      {value:34,name:'违规收送礼金'},{value:22,name:'公款吃喝'},
+      {value:18,name:'违规使用公车'},{value:14,name:'违规发放津补贴'},
+      {value:8,name:'违规采购'},{value:4,name:'其他'}]}]
+});
+
+mk('c3',{
+  grid:{left:44,right:30,top:8,bottom:24},
+  tooltip:{trigger:'axis'},
+  xAxis:Object.assign({type:'value'},axisCommon),
+  yAxis:Object.assign({type:'category',inverse:true,
+    data:['西安','咸阳','宝鸡','渭南','榆林','延安','汉中','安康','商洛','铜川']},axisCommon),
+  series:[{type:'bar',data:[96,78,65,58,52,47,40,33,28,22],barWidth:'55%',
+    showBackground:true,backgroundStyle:{color:'#eef2f7'},
+    itemStyle:{
+      borderRadius:[0,4,4,0],
+      color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[
+        {offset:0,color:'#1c1e54'},{offset:1,color:'#533afd'}]}
+    },
+    label:{show:true,position:'right',color:'#64748d',fontSize:10}}]
+});
+
+mk('c4',{
+  series:[{type:'wordCloud',shape:'circle',width:'96%',height:'92%',
+    sizeRange:[12,34],rotationRange:[0,0],gridSize:6,
+    textStyle:{fontFamily:'Noto Sans SC,Microsoft YaHei',
+      color:function(){ return T.palette[Math.floor(Math.random()*T.palette.length)]; }},
+    emphasis:{textStyle:{color:'#0d253d',fontWeight:'bold'}},
+    data:[
+      {name:'中央八项规定',value:100},{name:'四风问题',value:86},{name:'违规收受礼金',value:72},
+      {name:'公款吃喝',value:64},{name:'形式主义',value:55},{name:'官僚主义',value:48},
+      {name:'通报曝光',value:42},{name:'警示教育',value:36},{name:'酒驾醉驾',value:30},
+      {name:'廉洁纪律',value:26},{name:'群众身边腐败',value:22},{name:'一案双查',value:18}]}]
+});
+
+mk('c5',{
+  tooltip:{trigger:'item'},
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:10,itemHeight:10,icon:'circle'},
+  series:[{type:'pie',radius:['30%','66%'],center:['50%','44%'],roseType:'radius',
+    label:{color:T.text,fontSize:10},
+    itemStyle:{borderColor:'#ffffff',borderWidth:2,borderRadius:4},
+    data:[
+      {value:40,name:'秦风网'},{value:24,name:'省纪委网站'},
+      {value:16,name:'市纪委网站'},{value:12,name:'人民网'},
+      {value:8,name:'其他来源'}]}]
+});
+
+mk('c6',{
+  tooltip:{},
+  radar:{
+    indicator:[
+      {name:'查处力度',max:100},{name:'覆盖广度',max:100},{name:'时效性',max:100},
+      {name:'数据准确性',max:100},{name:'线索完整性',max:100}],
+    radius:'62%',center:['50%','52%'],
+    axisName:{color:'#64748d',fontSize:10},
+    splitLine:{lineStyle:{color:'#e3e8ee'}},
+    splitArea:{areaStyle:{color:['#ffffff','#f6f9fc']}},
+    axisLine:{lineStyle:{color:'#e3e8ee'}}
+  },
+  series:[{type:'radar',
+    data:[
+      {value:[86,74,90,82,68],name:'本季度',
+       lineStyle:{color:'#533afd',width:2},itemStyle:{color:'#533afd'},
+       areaStyle:{color:'rgba(83,58,253,0.15)'}},
+      {value:[70,66,78,74,60],name:'上季度',
+       lineStyle:{color:'#ea2261',width:1,type:'dashed'},itemStyle:{color:'#ea2261'},
+       areaStyle:{color:'rgba(234,34,97,0.05)'}}]}],
+  legend:{bottom:0,textStyle:{color:T.text,fontSize:10},itemWidth:12,itemHeight:8}
+});
+</script>
+</body>
+</html>

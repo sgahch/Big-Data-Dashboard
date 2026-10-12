@@ -1,0 +1,60 @@
+{
+  "md": "report.md",
+  "out": "AI监管大数据智能看板-作品文档.pdf",
+  "title": "AI 监管大数据智能看板 · 作品文档",
+  "author": "廉智通项目组",
+  "fonts": { "auto": true },
+  "brand": { "color": "#1F4E79" },
+  "margins": { "top": 54, "bottom": 54, "left": 54, "right": 54 },
+  "max_pages": 20,
+  "toc": { "levels": 2 },
+  "typography": { "scale": 1.0 },
+  "break_between_chapters": true,
+  "table": { "min_col_pt": 47 },
+  "figures": {
+    "arch": {
+      "type": "layers",
+      "width": 0.82,
+      "caption": "系统分层架构：呈现层 → 服务层 → 数据层 → 采集层",
+      "spec": [
+        "呈现层｜ECharts 多维看板 · 3D 地区地图 · Word/Excel/PDF 报告导出",
+        "服务层｜Django 4.2 + DRF：news / crawler / stats / users / ai_chat",
+        "数据层｜MySQL 8 · 22 张表：news / region / tag / crawl_log / audit_log 等",
+        "采集层｜APScheduler 定时调度 · requests + BeautifulSoup 解析 · URL 去重入库"
+      ]
+    },
+    "aiflow": {
+      "type": "flow",
+      "width": 0.86,
+      "caption": "自研违规类型判定流程：可解释的三因子加权打分",
+      "spec": [
+        "通报文本输入",
+        "三层关键词匹配（核心词 / 近义词 / 上下文行动词）",
+        "三因子加权打分（领域词权重 + 处置方式权重 + 职务层级权重）",
+        "输出判定结果与命中证据链"
+      ]
+    },
+    "opflow": {
+      "type": "flow",
+      "width": 0.86,
+      "caption": "用户操作流程：登录 → 看板 → 筛选 → AI 研判 → 导出",
+      "spec": [
+        "登录系统",
+        "进入数据看板",
+        "多维筛选与下钻",
+        "AI 问答 / 智能研判",
+        "一键导出报告"
+      ]
+    },
+    "aidemo1": {
+      "src": "ai_demo_1.png",
+      "width": 0.85,
+      "caption": "自研 AI 算法演示页·上（真实运行截图）：违规类型智能判定与地区风险热度评估实测"
+    },
+    "aidemo2": {
+      "src": "ai_demo_2.png",
+      "width": 0.85,
+      "caption": "自研 AI 算法演示页·下（真实运行截图）：离线自然语言查询与案件趋势预测实测"
+    }
+  }
+}
